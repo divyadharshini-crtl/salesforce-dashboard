@@ -2902,3 +2902,4 @@ w-44 bg-white rounded-xl shadow-lg border border-gray-100 z-50 py-1">
     </div>
   )
 }
+export default Dashboard
