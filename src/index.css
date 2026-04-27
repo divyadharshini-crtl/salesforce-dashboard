@@ -1,8 +1,12 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* ──────────────────────────────────────────────────────────────
    MODERN RADIANT INDIGO DESIGN SYSTEM
    ────────────────────────────────────────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
-
 :root {
   --primary: #4F46E5;
   --primary-hover: #4338CA;
@@ -149,6 +153,49 @@ body {
 @keyframes scaleUp {
   from { transform: scale(0.9); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
+}
+
+/* ── PREMIUM ASSETS ── */
+.premium-card {
+  background: white !important;
+  border: 1.5px solid #F1F5F9 !important;
+  border-radius: 2.5rem !important;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.04) !important;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  overflow: hidden !important;
+  position: relative !important;
+}
+
+.premium-card:hover {
+  transform: translateY(-8px) !important;
+  box-shadow: 0 30px 60px -15px rgba(79, 70, 229, 0.12) !important;
+  border-color: rgba(79, 70, 229, 0.3) !important;
+}
+
+.premium-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 5px;
+  background: linear-gradient(90deg, #4F46E5, #10B981);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: 10;
+}
+
+.premium-card:hover::before {
+  opacity: 1;
+}
+
+@keyframes chartLoad {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.chart-animate {
+  animation: chartLoad 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 
 /* ──────────────────────────────────────────────────────────────

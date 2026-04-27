@@ -1,123 +1,189 @@
-import React, { useState, useEffect, useRef } from 'react'
-import { 
-  Zap, Bell, Search, Calendar, ChevronDown, Download, Upload, Plus, 
-  Search as SearchIcon, Filter, MoreHorizontal, ArrowUpRight, ArrowDownRight,
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import {
+  Zap, Bell, Search, Calendar, ChevronDown, Download, Upload, Plus,
+  Filter, MoreHorizontal, ArrowUpRight, ArrowDownRight,
   LayoutDashboard, Users, PieChart, DollarSign, Settings, LogOut,
-  TrendingUp, TrendingDown, Clock, CheckCircle, AlertCircle, 
-  MessageSquare, Send, Bot, RefreshCw, Smartphone, Globe, Shield, 
-  Lock, Key, FileText, Share2, Mail, ExternalLink, Calendar as CalendarIcon,
-  Wifi, Target, Zap as ZapIcon, Briefcase, Building2, Contact, 
-  ClipboardList, Users2, FileDown, UploadCloud, BarChart3, 
+  TrendingUp, TrendingDown, Clock, CheckCircle, AlertCircle,
+  MessageSquare, Send, Bot, RefreshCw, Smartphone, Globe, Shield,
+  Lock, Key, FileText, Share2, Mail, ExternalLink,
+  Wifi, Target, Briefcase, Building2, Contact,
+  ClipboardList, Users2, FileDown, UploadCloud, BarChart3,
   Palette, User, Database, BellRing, Sun, Moon, Sparkles, Mic2, ShieldAlert, Flame, BookOpen, Layers, ChevronRight, AlertTriangle,
-  Cloud, UserPlus
+  Cloud, UserPlus, Headset, X, Activity, MoreVertical, Eye, Edit3, Trash2,
+  ThumbsUp, ThumbsDown, Copy, Edit2, Pin, MessageCircle
 } from 'lucide-react'
-import { 
+import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, LineChart, Line, PieChart as RePieChart, Pie, Cell, Legend,
-  ComposedChart
+  ComposedChart, ScatterChart, Scatter, ZAxis
 } from 'recharts'
+import * as XLSX from 'xlsx'
+import { jsPDF } from 'jspdf'
+import 'jspdf-autotable'
+
 
 // ──────────────────────────────────────────────────────────────
-// MOCK DATA & CONSTANTS
+// OVERALL THEME COLORS (Picture 1 Palette)
 // ──────────────────────────────────────────────────────────────
-
-const revenueData = [
-  { month: 'Jan', revenue: 45000, target: 40000 },
-  { month: 'Feb', revenue: 52000, target: 45000 },
-  { month: 'Mar', revenue: 48000, target: 50000 },
-  { month: 'Apr', revenue: 61000, target: 55000 },
-  { month: 'May', revenue: 55000, target: 60000 },
-  { month: 'Jun', revenue: 67000, target: 65000 },
-]
-
-const channelData = [
-  { name: 'Direct', value: 35, color: '#4F46E5' },
-  { name: 'Search', value: 25, color: '#10B981' },
-  { name: 'Social', value: 20, color: '#F59E0B' },
-  { name: 'Referral', value: 15, color: '#EC4899' },
-  { name: 'Email', value: 5, color: '#06B6D4' },
-]
-
-const conversionData = [
-  { stage: 'New', value: 2400 },
-  { stage: 'Open', value: 1850 },
-  { stage: 'Working', value: 1200 },
-  { stage: 'Qualified', value: 900 },
-  { stage: 'Converted', value: 450 },
-]
-
-const customerRows = [
-  { name: 'Alex Rivera', company: 'TechFlow Inc.', plan: 'Enterprise', mrr: '$2,500', health: 'Healthy', joined: 'Mar 12, 2024' },
-  { name: 'Sarah Miller', company: 'CloudScale', plan: 'Pro', mrr: '$1,200', health: 'At Risk', joined: 'Feb 28, 2024' },
-  { name: 'James Chen', company: 'Innovate AI', plan: 'Enterprise', mrr: '$4,800', health: 'Healthy', joined: 'Apr 05, 2024' },
-  { name: 'Emma Wilson', company: 'SwiftPay', plan: 'Basic', mrr: '$450', health: 'Healthy', joined: 'Jan 15, 2024' },
-  { name: 'Michael Brown', company: 'Global Logistics', plan: 'Pro', mrr: '$1,200', health: 'Churned', joined: 'Dec 10, 2023' },
-]
-
-const navItems = [
-  { icon: LayoutDashboard, label: 'Overview' },
-  { icon: Zap, label: 'Opportunities' },
-  { icon: Building2, label: 'Accounts' },
-  { icon: Users, label: 'Customers' },
-  { icon: Contact, label: 'Contacts' },
-  { icon: PieChart, label: 'Analytics' },
-  { icon: DollarSign, label: 'Revenue' },
-  { icon: Target, label: 'Campaigns' },
-  { icon: ClipboardList, label: 'Tasks' },
-  { icon: CalendarIcon, label: 'Calendar' },
-  { icon: Users2, label: 'Groups' },
-  { icon: FileText, label: 'Files' },
-  { icon: BarChart3, label: 'Reports' },
-  { icon: Share2, label: 'Integrations' },
-  { icon: Settings, label: 'Settings' },
-]
-
-const activityFeed = [
-  { icon: CheckCircle, text: 'New enterprise deal closed by Sarah', time: '2 mins ago', color: '#10B981' },
-  { icon: AlertCircle, text: 'Lead churn risk detected for CloudScale', time: '1 hour ago', color: '#F59E0B' },
-  { icon: Plus, text: 'New lead "Invision Lab" added from Search', time: '3 hours ago', color: '#4F46E5' },
-]
-
-const kpis = [
-  { label: 'Pipeline Value', value: '$1.2M', change: '+12.5%', positive: true, icon: DollarSign, color: '#4F46E5', bgColor: '#EEF2FF' },
-  { label: 'Leads', value: '2,400', change: '+14.2%', positive: true, icon: Users, color: '#10B981', bgColor: '#ECFDF5' },
-  { label: 'Avg Deal Size', value: '$18.5k', change: '-2.4%', positive: false, icon: TrendingUp, color: '#F59E0B', bgColor: '#FFFBEB' },
-  { label: 'Conversion', value: '18.5%', change: '+4.8%', positive: true, icon: Zap, color: '#06B6D4', bgColor: '#ECFEFF' },
-]
-
-const aiResponses = {
-  "how are my leads performing?": "Your leads are currently up **14.2%** this month. The highest quality leads are originating from **Direct** and **Search** channels, with an average conversion rate of **18.5%**. I recommend focusing on the 'Qualified' segment as it has grown by 8%.",
-  "project revenue for next month": "Based on current pipeline acceleration (+12.5%) and historical conversion data, I project next month's revenue to be approximately **$72,400**, representing an 8% growth over this month's actuals.",
-  "who are my top at-risk customers?": "I've identified **CloudScale** as your primary at-risk account. Their engagement velocity has dropped by 30% over the last 14 days, and their NPS score recently decreased to 6.2. I've scheduled a high-priority task for Sarah Miller to reach out.",
-  "should i increase spend on social?": "While Social channels account for 20% of your leads, the customer acquisition cost (CAC) is 15% higher than Search. However, the lifetime value (LTV) of social leads is 22% higher. I recommend a **moderate 10% increase** in spend to test scaling.",
-  "create a new lead": { type: 'leadForm' },
-  "create a new opportunity": { type: 'opportunityForm' },
-  "create a new task": { type: 'taskForm' },
-  "create a new account": { type: 'accountForm' },
-  "create a new contact": { type: 'contactForm' },
-  "schedule a meeting": { type: 'eventForm' },
-  "upload a file": { type: 'fileForm' },
-  "create a new group": { type: 'groupForm' }
+const COLORS = {
+  primary: '#4F46E5',
+  success: '#10B981',
+  warning: '#F59E0B',
+  danger: '#EF4444',
+  surface: '#FFFFFF',
+  background: '#FAFAF8',
+  textHeader: '#0F172A',
+  textSecondary: '#64748B'
 }
 
-const fallbackLeads = [
-  { Name: 'Mock John', Company: 'Mock Corp', Email: 'john@mock.com', Status: 'New', Rating: 'Hot' },
-  { Name: 'Mock Jane', Company: 'Mock LLC', Email: 'jane@mock.com', Status: 'Working', Rating: 'Warm' },
+// ──────────────────────────────────────────────────────────────
+// MOCK DATA (Enriched for Picture 1 styling)
+// ──────────────────────────────────────────────────────────────
+const GAUGE_DATA = [
+  { name: 'Achieved', value: 73, fill: '#4F46E5' },
+  { name: 'Remaining', value: 27, fill: '#F1F5F9' },
 ]
 
+const HEATMAP_DATA = Array.from({ length: 7 }, (_, day) =>
+  Array.from({ length: 24 }, (_, hour) => ({
+    day, hour, value: Math.floor(Math.random() * 100)
+  }))
+).flat()
+
+const BUBBLE_DATA = [
+  { x: 45, y: 12000, z: 200, status: 'Hot', name: 'Global Tech' },
+  { x: 30, y: 5000, z: 100, status: 'Warm', name: 'Lite Soft' },
+  { x: 80, y: 45000, z: 400, status: 'Hot', name: 'Mega Corp' },
+  { x: 60, y: 15000, z: 150, status: 'Cold', name: 'Small Biz' },
+  { x: 20, y: 8000, z: 80, status: 'Warm', name: 'Quick Ship' },
+  { x: 90, y: 35000, z: 300, status: 'Hot', name: 'Sky Net' },
+  { x: 50, y: 22000, z: 250, status: 'Hot', name: 'Inno Lab' },
+]
+
+const WATERFALL_DATA = [
+  { month: 'Jan', gain: 45000, loss: 0, total: 45000 },
+  { month: 'Feb', gain: 12000, loss: -5000, total: 52000 },
+  { month: 'Mar', gain: 25000, loss: -8000, total: 69000 },
+  { month: 'Apr', gain: 0, loss: -15000, total: 54000 },
+  { month: 'May', gain: 30000, loss: 0, total: 84000 },
+  { month: 'Jun', gain: 15000, loss: -2000, total: 97000 },
+]
+
+const SCATTER_PLOT_DATA = Array.from({ length: 30 }, () => ({
+  score: Math.floor(Math.random() * 100),
+  revenue: Math.floor(Math.random() * 50000) + 5000,
+  source: ['Web', 'Phone', 'Partner'][Math.floor(Math.random() * 3)]
+}))
+
+const DEFAULT_REVENUE_DATA = [
+  { month: 'Jan', revenue: 0, benchmark: 100000 },
+  { month: 'Feb', revenue: 0, benchmark: 200000 },
+  { month: 'Mar', revenue: 0, benchmark: 300000 },
+  { month: 'Apr', revenue: 0, benchmark: 400000 },
+  { month: 'May', revenue: 0, benchmark: 500000 },
+]
+
+const getLeadValue = (l) => {
+  const ratings = { 'Hot': 45000, 'Warm': 12000, 'Cold': 2500 };
+  return ratings[l.Rating] || 5000;
+};
+
+// Legacy activity list removed to avoid confusion with live Salesforce data.
+
+const aiHoverPills = ["What's our MRR growth?", "Which customers are...", "Show top acquisition..."]
+
+// ── FORM FIELD CONFIGURATIONS ──
+const FORMS = {
+  Opportunity: [
+    { name: 'Name', label: 'Opportunity Name', type: 'text', required: true, placeholder: 'Enter opportunity name *', full: true },
+    { name: 'Amount', label: 'Amount ($)', type: 'number', placeholder: 'Enter expected amount' },
+    { name: 'StageName', label: 'Stage', type: 'select', required: true, options: ['Prospecting', 'Qualification', 'Needs Analysis', 'Value Proposition', 'Id. Decision Makers', 'Proposal/Price Quote', 'Negotiation/Review', 'Closed Won', 'Closed Lost'] },
+    { name: 'CloseDate', label: 'Close Date', type: 'date', required: true },
+    { name: 'Probability', label: 'Probability (%)', type: 'number', placeholder: '0-100' },
+    { name: 'LeadSource', label: 'Lead Source', type: 'select', options: ['Web', 'Phone', 'Partner', 'Referral', 'Chatbot AI'] },
+    { name: 'Description', label: 'Description', type: 'textarea', full: true }
+  ],
+  Lead: [
+    { name: 'FirstName', label: 'First Name', type: 'text', placeholder: 'Enter first name' },
+    { name: 'LastName', label: 'Last Name', type: 'text', required: true, placeholder: 'Enter last name *' },
+    { name: 'Company', label: 'Company', type: 'text', required: true, placeholder: 'Enter company name *' },
+    { name: 'Email', label: 'Email', type: 'email', placeholder: 'Enter email address' },
+    { name: 'Phone', label: 'Phone', type: 'tel', placeholder: 'Enter phone number' },
+    { name: 'Status', label: 'Status', type: 'select', options: ['New', 'Working', 'Nurturing', 'Unqualified', 'Converted'] },
+    { name: 'Rating', label: 'Rating', type: 'select', options: ['Hot', 'Warm', 'Cold'] },
+    { name: 'LeadSource', label: 'Lead Source', type: 'select', options: ['Web', 'Phone', 'Email', 'Referral', 'Chatbot AI'] },
+    { name: 'Industry', label: 'Industry', type: 'select', options: ['Technology', 'Finance', 'Healthcare', 'Education', 'Retail', 'Manufacturing'] },
+    { name: 'AnnualRevenue', label: 'Annual Revenue', type: 'number', placeholder: 'Enter revenue' },
+    { name: 'Description', label: 'Description', type: 'textarea', placeholder: 'Enter details', full: true }
+  ],
+  Account: [
+    { name: 'Name', label: 'Account Name', type: 'text', required: true, placeholder: 'Enter account name *', full: true },
+    { name: 'Industry', label: 'Industry', type: 'select', options: ['Technology', 'Finance', 'Healthcare', 'Education', 'Retail', 'Manufacturing'] },
+    { name: 'Type', label: 'Account Type', type: 'select', options: ['Prospect', 'Customer', 'Partner', 'Competitor'] },
+    { name: 'Website', label: 'Website', type: 'url', placeholder: 'https://...' },
+    { name: 'Phone', label: 'Phone', type: 'tel' },
+    { name: 'BillingStreet', label: 'Billing Address', type: 'textarea', full: true },
+    { name: 'AnnualRevenue', label: 'Annual Revenue', type: 'number' },
+    { name: 'NumberOfEmployees', label: 'Employees', type: 'number' },
+    { name: 'Description', label: 'Description', type: 'textarea', full: true }
+  ],
+  Contact: [
+    { name: 'FirstName', label: 'First Name', type: 'text' },
+    { name: 'LastName', label: 'Last Name', type: 'text', required: true, placeholder: 'Enter last name *' },
+    { name: 'Title', label: 'Job Title', type: 'text' },
+    { name: 'Email', label: 'Email', type: 'email', full: true },
+    { name: 'Phone', label: 'Phone', type: 'tel' },
+    { name: 'MobilePhone', label: 'Mobile', type: 'tel' },
+    { name: 'Department', label: 'Department', type: 'text' },
+    { name: 'MailingStreet', label: 'Mailing Address', type: 'textarea', full: true },
+    { name: 'Description', label: 'Description', type: 'textarea', full: true }
+  ],
+  Task: [
+    { name: 'Subject', label: 'Subject', type: 'text', required: true, placeholder: 'What needs to be done? *', full: true },
+    { name: 'Status', label: 'Status', type: 'select', options: ['Not Started', 'In Progress', 'Completed', 'Waiting', 'Deferred'] },
+    { name: 'Priority', label: 'Priority', type: 'select', options: ['High', 'Normal', 'Low'] },
+    { name: 'ActivityDate', label: 'Due Date', type: 'date' },
+    { name: 'Description', label: 'Description', type: 'textarea', full: true }
+  ],
+  Event: [
+    { name: 'Subject', label: 'Subject', type: 'text', required: true, placeholder: 'Meeting title *', full: true },
+    { name: 'StartDateTime', label: 'Start Time', type: 'datetime-local', required: true },
+    { name: 'EndDateTime', label: 'End Time', type: 'datetime-local', required: true },
+    { name: 'Location', label: 'Location', type: 'text' },
+    { name: 'Description', label: 'Description', type: 'textarea', full: true }
+  ],
+  Campaign: [
+    { name: 'Name', label: 'Campaign Name', type: 'text', required: true, placeholder: 'Enter campaign name *', full: true },
+    { name: 'Status', label: 'Status', type: 'select', options: ['Planned', 'In Progress', 'Completed', 'Aborted'] },
+    { name: 'Type', label: 'Type', type: 'select', options: ['Conference', 'Webinar', 'Trade Show', 'Public Relations', 'Partners', 'Referral Program', 'Other'] },
+    { name: 'StartDate', label: 'Start Date', type: 'date' },
+    { name: 'EndDate', label: 'End Date', type: 'date' }
+  ],
+  Report: [
+    { name: 'Name', label: 'Report Name', type: 'text', required: true, placeholder: 'Enter report name *', full: true },
+    { name: 'Format', label: 'Format', type: 'select', options: ['Tabular', 'Summary', 'Matrix', 'Joined'] },
+    { name: 'Description', label: 'Description', type: 'textarea', full: true }
+  ],
+  Group: [
+    { name: 'Name', label: 'Group Name', type: 'text', required: true, placeholder: 'Enter group name *', full: true },
+    { name: 'Description', label: 'Description', type: 'textarea', full: true },
+    { name: 'CollaborationType', label: 'Access', type: 'select', options: ['Public', 'Private', 'Unlisted'] }
+  ]
+}
+
 // ──────────────────────────────────────────────────────────────
-// UTILS & COMPONENTS
+// COMPONENTS
 // ──────────────────────────────────────────────────────────────
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-white p-4 shadow-xl border border-gray-50 rounded-2xl">
-        <p className="text-xs font-bold text-gray-400 uppercase mb-2">{label}</p>
+      <div className="bg-white p-4 shadow-xl border border-gray-100 rounded-2xl ring-4 ring-indigo-50/50">
+        <p className="text-[10px] font-black text-gray-400 uppercase mb-2 tracking-widest">{label}</p>
         {payload.map((p, i) => (
-          <div key={i} className="flex items-center gap-3 mb-1 last:mb-0">
+          <div key={i} className="flex items-center gap-3 mb-1.5 last:mb-0">
             <div className="w-2 h-2 rounded-full" style={{ background: p.color }} />
-            <p className="text-sm font-extrabold text-gray-900">{p.name}: {typeof p.value === 'number' ? `$${p.value.toLocaleString()}` : p.value}</p>
+            <p className="text-xs font-black text-slate-900">{p.name}: ${p.value.toLocaleString()}</p>
           </div>
         ))}
       </div>
@@ -126,990 +192,825 @@ const CustomTooltip = ({ active, payload, label }) => {
   return null
 }
 
-const PlanBadge = ({ plan }) => (
-  <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-    plan === 'Enterprise' ? 'bg-indigo-50 text-indigo-600 border border-indigo-100' :
-    plan === 'Pro' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
-    'bg-gray-100 text-gray-600'
-  }`}>
-    {plan}
-  </span>
-)
-
 const HealthBadge = ({ status }) => (
-  <span className={`flex items-center gap-1.5 text-[11px] font-bold ${
-    status === 'Healthy' ? 'text-emerald-600' :
-    status === 'At Risk' ? 'text-amber-500' :
-    status === 'Churned' ? 'text-gray-400' : 'text-red-500'
-  }`}>
-    <div className={`w-1.5 h-1.5 rounded-full ${
-      status === 'Healthy' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' :
-      status === 'At Risk' ? 'bg-amber-500' :
-      status === 'Churned' ? 'bg-gray-300' : 'bg-red-500'
-    }`} />
-    {status}
-  </span>
+  <div className="flex items-center gap-2">
+    <div className={`w-2 h-2 rounded-full ${status === 'Healthy' ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+    <span className="text-xs font-bold text-slate-600">{status}</span>
+  </div>
 )
 
-const StageBadge = ({ stage }) => {
-  const colors = {
-    'Qualification': 'bg-blue-50 text-blue-600 border-blue-100',
-    'Needs Analysis': 'bg-indigo-50 text-indigo-600 border-indigo-100',
-    'Proposal/Price Quote': 'bg-purple-50 text-purple-600 border-purple-100',
-    'Negotiation/Review': 'bg-amber-50 text-amber-600 border-amber-100',
-    'Closed Won': 'bg-emerald-50 text-emerald-600 border-emerald-100',
-    'Closed Lost': 'bg-red-50 text-red-600 border-red-100'
-  }
-  return <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${colors[stage] || 'bg-gray-50 text-gray-500'}`}>{stage}</span>
-}
 
-function getLeadValue(lead) {
-  const r = (lead.Rating || lead.rating || '').toLowerCase()
-  if (r === 'hot') return 5000 + (Math.random() * 15000)
-  if (r === 'warm') return 1000 + (Math.random() * 4000)
-  return 200 + (Math.random() * 800)
-}
-
-function buildDashboardData(leads, opps) {
-  // KPIs
-  const totalLeads = leads.length
-  const hotLeads = leads.filter(l => (l.Rating || l.rating || '').toLowerCase() === 'hot').length
-  const totalPipeline = opps.reduce((sum, o) => sum + (o.Amount || 0), 0)
-  const convertedCount = leads.filter(l => (l.Status || '').includes('Converted')).length
-
-  const dynKPIs = [
-    { label: 'Pipeline Value', value: `$${(totalPipeline / 1000000).toFixed(1)}M`, change: '+8.2%', positive: true, icon: DollarSign, color: '#4F46E5', bgColor: '#EEF2FF', live: true },
-    { label: 'Salesforce Leads', value: totalLeads.toLocaleString(), change: '+21.0%', positive: true, icon: Users, color: '#10B981', bgColor: '#ECFDF5', live: true },
-    { label: 'Hot Leads', value: hotLeads, change: '+5.4%', positive: true, icon: Flame, color: '#F59E0B', bgColor: '#FFFBEB', live: true },
-    { label: 'Converted', value: convertedCount, change: '+2.1%', positive: true, icon: Zap, color: '#06B6D4', bgColor: '#ECFEFF', live: true },
-  ]
-
-  // Revenue (Mock Trend based on real totals)
-  const baseRevenue = [
-    { month: 'Jan', revenue: 45000, target: 40000 },
-    { month: 'Feb', revenue: 52000, target: 45000 },
-    { month: 'Mar', revenue: 48000, target: 50000 },
-    { month: 'Apr', revenue: totalPipeline * 0.05, target: 55000 },
-  ]
-
-  // Customer Rows from Leads
-  const customerRowsSF = leads.slice(0, 15).map(l => ({
-    name: l.Name || 'Unknown Name',
-    company: l.Company || 'N/A',
-    plan: l.Rating === 'Hot' ? 'Enterprise' : 'Pro',
-    mrr: `$${Math.floor(getLeadValue(l)).toLocaleString()}`,
-    health: l.Rating === 'Hot' ? 'Healthy' : (l.Rating === 'Warm' ? 'Healthy' : 'At Risk'),
-    joined: new Date(l.CreatedDate).toLocaleDateString()
-  }))
-
-  const conversionDataSF = [
-    { stage: 'New', value: leads.length },
-    { stage: 'Open', value: Math.floor(leads.length * 0.7) },
-    { stage: 'Working', value: Math.floor(leads.length * 0.4) },
-    { stage: 'Qualified', value: Math.floor(leads.length * 0.25) },
-    { stage: 'Converted', value: convertedCount },
-  ]
-
-  const activitySF = leads.slice(0, 5).map(l => ({
-    icon: User,
-    text: `New lead sync: ${l.Name} from ${l.Company}`,
-    time: 'Just now',
-    color: '#4F46E5'
-  }))
-
-  return { dynKPIs, revenueDataSF: baseRevenue, customerRowsSF, conversionDataSF, activitySF }
-}
-
-function generateAIReply(query, sfLeads) {
-  const l = query.toLowerCase()
-  
-  // Create / Update / Delete detection
-  if (l.includes('create') || l.includes('add') || l.includes('new')) {
-    if (l.includes('lead')) return { role: 'ai', text: "Of course! Let's get that new record into Salesforce. Please fill out the lead profile below:", type: 'leadForm' }
-    if (l.includes('opp')) return { role: 'ai', text: "Starting a new Opportunity block. What are the deal details?", type: 'opportunityForm' }
-    if (l.includes('task')) return { role: 'ai', text: "Scheduling a new follow-up. Please set the priority and due date:", type: 'taskForm' }
-    if (l.includes('account')) return { role: 'ai', text: "Creating a new Corporate Account. Please provide organization details:", type: 'accountForm' }
-    if (l.includes('contact')) return { role: 'ai', text: "Adding a new Relationship contact. Who are we connecting with?", type: 'contactForm' }
-    if (l.includes('event') || l.includes('meeting')) return { role: 'ai', text: "Blocking time for a new Event. Please set the agenda:", type: 'eventForm' }
-    if (l.includes('group')) return { role: 'ai', text: "Initializing a new Chatter collaboration hub. Set the group parameters:", type: 'groupForm' }
-    if (l.includes('file') || l.includes('upload')) return { role: 'ai', text: "Ready for document ingestion. Please select a file to push to Salesforce:", type: 'fileForm' }
-  }
-
-  // Update logic: "update john doe"
-  if (l.includes('update') || l.includes('edit') || l.includes('change')) {
-    const nameMatch = query.split(' ').slice(1).join(' ').trim()
-    if (nameMatch && sfLeads) {
-      const matches = sfLeads.filter(le => le.Name.toLowerCase().includes(nameMatch.toLowerCase()))
-      if (matches.length === 1) return { role: 'ai', text: `Found ${matches[0].Name}. Opening the record editor...`, type: 'update', lead: matches[0] }
-      if (matches.length > 1) return { role: 'ai', text: `I found multiple records for "${nameMatch}". Please select the correct one:`, type: 'selector', subType: 'update', leads: matches }
-    }
-    return { role: 'ai', text: "I can help you update records. Please specify the lead name, e.g., 'Update John Doe'." }
-  }
-
-  // Delete logic
-  if (l.includes('delete') || l.includes('remove')) {
-    const nameMatch = query.split(' ').slice(1).join(' ').trim()
-    if (nameMatch && sfLeads) {
-      const matches = sfLeads.filter(le => le.Name.toLowerCase().includes(nameMatch.toLowerCase()))
-      if (matches.length === 1) return { role: 'ai', text: `Warning: Deleting ${matches[0].Name} is permanent.`, type: 'delete', lead: matches[0] }
-      if (matches.length > 1) return { role: 'ai', text: `Multiple matches for "${nameMatch}". Which should I remove?`, type: 'selector', subType: 'delete', leads: matches }
-    }
-  }
-
-  // Value query for Leads
-  if (l.includes('value of') || l.includes('calculated revenue')) {
-    const nameMatch = query.split(' ').slice(-2).join(' ')
-    const match = sfLeads?.find(le => le.Name.toLowerCase().includes(nameMatch.toLowerCase()))
-    if (match) {
-      const val = getLeadValue(match)
-      return { role: 'ai', text: `Calculated value for **${match.Name}** is approximately **$${Math.floor(val).toLocaleString()}** based on their **${match.Rating || 'Warm'}** rating.` }
-    }
-  }
-
-  // Dynamic Q&A
-  if (l.includes('total') || l.includes('how many')) {
-    if (l.includes('lead')) return { role: 'ai', text: `You currently have **${sfLeads?.length || 0}** leads synced from Salesforce.` }
-    if (l.includes('hot')) return { role: 'ai', text: `I've flagged **${sfLeads?.filter(le => (le.Rating || '').toLowerCase() === 'hot').length || 0}** leads as high-intent (Hot).` }
-  }
-
-  // Default Fallback
-  const response = aiResponses[l]
-  if (response) return typeof response === 'string' ? { role: 'ai', text: response } : { role: 'ai', text: "Setting that up for you...", ...response }
-
-  return { role: 'ai', text: "I'm analyzing that data point now... Your workspace seems efficient, but I'd suggest investigating the drop-off in your conversion funnel." }
-}
-
-// ──────────────────────────────────────────────────────────────
-// CUSTOM VIEWS & SUB-COMPONENTS
-// ──────────────────────────────────────────────────────────────
-
-function Integrations({ isConnected, onConnectSF }) {
-  const integrations = [
-    { name: 'Salesforce', icon: Cloud, desc: 'Sync leads, contacts & opportunities', status: isConnected ? 'Connected' : 'Disconnected', color: isConnected ? 'text-emerald-500' : 'text-indigo-500' },
-    { name: 'Slack', icon: MessageSquare, desc: 'Receive real-time AI alerts', status: 'Coming Soon', color: 'text-gray-400' },
-    { name: 'Zendesk', icon: CheckCircle, desc: 'Merge support tickets with CRM', status: 'Coming Soon', color: 'text-gray-400' },
+// ── KPI DETAIL MODAL ──
+function KPIDetailModal({ label, value, change, icon: Icon, color, positive, onClose }) {
+  const trendData = React.useMemo(() => [
+    { m: 'Oct', v: 34 }, { m: 'Nov', v: 42 }, { m: 'Dec', v: 51 },
+    { m: 'Jan', v: 58 }, { m: 'Feb', v: 62 }, { m: 'Mar', v: 71 },
+  ], [])
+  const sources = [
+    { name: 'Direct', pct: 60 },
+    { name: 'Organic', pct: 25 },
+    { name: 'Paid', pct: 15 },
   ]
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {integrations.map((app, i) => (
-        <div key={i} className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-xl transition-all group">
-          <div className="flex items-center justify-between mb-4">
-            <div className={`w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center ${app.color} group-hover:scale-110 transition-transform`}>
-              <app.icon size={24} />
-            </div>
-            <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${app.status === 'Connected' ? 'bg-emerald-50 text-emerald-600' : 'bg-gray-50 text-gray-400'}`}>
-              {app.status}
-            </span>
+    <div className="fixed inset-0 z-[300] flex items-center justify-center p-6" onClick={onClose}>
+      <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" />
+      <div
+        className="relative z-10 w-full max-w-[360px] rounded-[28px] overflow-hidden shadow-[0_32px_64px_-12px_rgba(79,70,229,0.35)]"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* ── GRADIENT HEADER ── */}
+        <div
+          className="relative px-7 pt-7 pb-14 overflow-hidden"
+          style={{ background: 'linear-gradient(140deg, #4F46E5 0%, #7C3AED 55%, #818CF8 100%)' }}
+        >
+          {/* Close button */}
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center text-white transition-colors z-10"
+          >
+            <X size={15} />
+          </button>
+          {/* Watermark */}
+          <div className="absolute right-5 top-4 opacity-[0.08] pointer-events-none">
+            <Icon size={90} color="white" />
           </div>
-          <h4 className="text-base font-bold text-gray-900 mb-1">{app.name}</h4>
-          <p className="text-xs text-gray-500 mb-6">{app.desc}</p>
-          {app.name === 'Salesforce' && !isConnected ? (
-            <button onClick={onConnectSF} className="w-full py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-100">Connect Instance</button>
-          ) : (
-            <button className="w-full py-2.5 bg-gray-50 rounded-xl text-xs font-bold text-gray-400 cursor-not-allowed">Configure</button>
+          {/* Label */}
+          <p className="text-[9px] font-black text-white/55 uppercase tracking-[0.22em] mb-3 leading-none">
+            {label} Summary
+          </p>
+          {/* Value */}
+          <h2 className="text-[42px] font-black text-white leading-none tracking-tight">{value}</h2>
+        </div>
+
+        {/* ── WHITE BODY ── */}
+        <div className="bg-white">
+
+          {/* Trend chart card — overlapping the header */}
+          <div className="mx-5 -mt-7 relative z-10 bg-white rounded-2xl shadow-[0_8px_24px_rgba(0,0,0,0.10)] border border-slate-50 overflow-hidden">
+            <div className="h-[80px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={trendData} margin={{ top: 8, right: 0, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="kpiModalGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#6366F1" stopOpacity={0.18} />
+                      <stop offset="100%" stopColor="#6366F1" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <Area
+                    type="monotone" dataKey="v"
+                    stroke="#4F46E5" strokeWidth={2.5}
+                    fill="url(#kpiModalGrad)" dot={false}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+            {/* Chart footer labels */}
+            <div className="flex items-center justify-between px-4 py-2.5 border-t border-slate-50">
+              <span className="text-[8px] font-black text-slate-300 uppercase tracking-widest">30 Day Trend</span>
+              <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest">↑ Growth Identified</span>
+            </div>
+          </div>
+
+          {/* ── IMPACT + STATUS ROW ── */}
+          <div className="grid grid-cols-2 gap-3 mx-5 mt-4">
+            <div className="p-4 bg-slate-50/70 rounded-2xl">
+              <p className="text-[8px] font-black text-slate-400 uppercase tracking-[0.18em] mb-2 leading-none">Impact Velocity</p>
+              <div className={`flex items-center gap-1.5 text-[17px] font-black leading-none ${positive ? 'text-emerald-500' : 'text-amber-500'}`}>
+                {change || '+4.8%'}
+                {positive ? <TrendingUp size={15} strokeWidth={3} /> : <TrendingDown size={15} strokeWidth={3} />}
+              </div>
+            </div>
+            <div className="p-4 bg-slate-50/70 rounded-2xl">
+              <p className="text-[8px] font-black text-slate-400 uppercase tracking-[0.18em] mb-2 leading-none">Status Intelligence</p>
+              <div className="flex items-center gap-1.5 text-[13px] font-black text-emerald-600 leading-none">
+                Healthy Flow
+                <CheckCircle size={13} strokeWidth={2.5} className="text-emerald-500" />
+              </div>
+            </div>
+          </div>
+
+          {/* ── ENGAGEMENT SOURCE DISTRIBUTION ── */}
+          <div className="mx-5 mt-5">
+            <p className="text-[8px] font-black text-slate-400 uppercase tracking-[0.18em] mb-3 leading-none">Engagement Source Distribution</p>
+            <div className="space-y-3">
+              {sources.map(s => (
+                <div key={s.name}>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[12px] font-bold text-slate-600">{s.name}</span>
+                    <span className="text-[12px] font-black text-indigo-600">{s.pct}%</span>
+                  </div>
+                  <div className="h-[5px] bg-slate-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-700"
+                      style={{ width: `${s.pct}%`, background: 'linear-gradient(90deg, #4F46E5 0%, #7C3AED 100%)' }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* ── CTA BUTTON ── */}
+          <div className="mx-5 mt-5 mb-5">
+            <button
+              onClick={onClose}
+              className="w-full py-[14px] rounded-2xl text-white text-[10px] font-black uppercase tracking-[0.18em] flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.98] transition-all"
+              style={{ background: 'linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)' }}
+            >
+              Access Full Operational Intelligence
+              <ArrowUpRight size={14} strokeWidth={2.5} />
+            </button>
+          </div>
+
+        </div>{/* end white body */}
+      </div>
+    </div>
+  )
+}
+
+
+function KPICard({ label, value, change, icon: Icon, color, secondaryLabel, positive }) {
+  const [showDetail, setShowDetail] = React.useState(false)
+  return (
+    <>
+      <div
+        className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm hover:shadow-2xl transition-all cursor-pointer group relative overflow-hidden active:scale-[0.98]"
+        onClick={() => setShowDetail(true)}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg" style={{ background: color + '10' }}>
+            <Icon size={22} style={{ color: color }} />
+          </div>
+          {secondaryLabel && (
+            <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-100">
+              <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
+              <span className="text-[10px] font-black text-emerald-600 uppercase tracking-tighter">{secondaryLabel}</span>
+            </div>
           )}
         </div>
-      ))}
+        <div className="text-3xl font-black text-slate-900 tracking-tight mb-1">{value}</div>
+        <div className="flex items-center justify-between">
+          <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{label}</div>
+          {change && <span className={`text-[10px] font-black ${positive ? 'text-emerald-500' : 'text-amber-500'}`}>{change}</span>}
+        </div>
+        {/* Tap hint */}
+        <div className="absolute bottom-3 right-4 text-[8px] font-black text-slate-200 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">Tap for details</div>
+      </div>
+      {showDetail && (
+        <KPIDetailModal
+          label={label} value={value} change={change} icon={Icon} color={color} positive={positive}
+          onClose={() => setShowDetail(false)}
+        />
+      )}
+    </>
+  )
+}
+
+
+function ConnectSalesforceModal({ onClose }) {
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md" onClick={onClose} />
+      <div className="bg-white w-full max-w-md rounded-[40px] p-10 relative z-10 text-center shadow-2xl overflow-hidden">
+        <div className="absolute top-0 right-0 p-8 opacity-5"><Cloud size={120} /></div>
+        <div className="w-20 h-20 bg-indigo-50 rounded-3xl flex items-center justify-center text-indigo-600 mx-auto mb-6"><Shield size={32} /></div>
+        <h2 className="text-2xl font-black text-slate-900 mb-2">Connect Salesforce</h2>
+        <p className="text-sm text-slate-500 mb-8 px-4">Authorize Pulsar AI to access your CRM metadata for live intelligence streams.</p>
+        <button onClick={() => window.location.href = 'http://localhost:3001/auth'} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold shadow-xl hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all">Secure OAuth Login</button>
+        <button onClick={onClose} className="mt-6 text-[10px] font-black text-slate-300 uppercase tracking-widest hover:text-indigo-400 transition-colors">Maybe Later</button>
+      </div>
     </div>
   )
 }
 
-function Team() {
-    const team = [
-        { name: 'Divya Dharshini', role: 'Sales Lead', email: 'divya@corp.com', avatar: 'DD', color: '#4F46E5' },
-        { name: 'Sarah Miller', role: 'Account Exec', email: 'sarah@corp.com', avatar: 'SM', color: '#10B981' },
-        { name: 'James Chen', role: 'Operations', email: 'james@corp.com', avatar: 'JC', color: '#F59E0B' },
-    ]
-    return (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="px-6 py-6 border-b border-gray-50 bg-[#FAFAFA]">
-                <h3 className="text-lg font-bold text-gray-900 font-heading">Workspace Members</h3>
-                <p className="text-xs text-gray-400 mt-0.5">Manage permissions and team access levels</p>
-            </div>
-            <div className="divide-y divide-gray-50">
-                {team.map((m, i) => (
-                    <div key={i} className="px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
-                        <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold text-white shadow-sm" style={{ background: m.color }}>{m.avatar}</div>
-                            <div><div className="text-sm font-bold text-gray-900">{m.name}</div><div className="text-xs text-gray-400">{m.email}</div></div>
-                        </div>
-                        <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-100 uppercase tracking-tight">{m.role}</span>
-                    </div>
-                ))}
-            </div>
-        </div>
-    )
+
+const LANGUAGE_MAP = {
+  en: {
+    welcome: "👋 Hi! I'm your analytics AI. Ask me about revenue, churn, or CRM operations!",
+    creating: "Initiating high-fidelity creation flow for {object}...",
+    updating: "Please select the {object} you wish to modify:",
+    deleting: "Select a {object} for secure deletion:",
+    error: "❌ Failed: {message}",
+    success: "✅ {record} created successfully!",
+    deleted: "🗑️ Record Deleted: {name} removed from Salesforce.",
+    noMatch: "I'm standing by for CRM operations. Use the '+' menu for creation or updates."
+  },
+  ta: {
+    welcome: "👋 வணக்கம்! நான் உங்கள் பகுப்பாய்வு AI. வருவாய் அல்லது CRM செயல்பாடுகள் பற்றி கேளுங்கள்!",
+    creating: "{object} உருவாக்கத் தொடங்குகிறது...",
+    updating: "நீங்கள் மாற்ற விரும்பும் {object}-ஐத் தேர்ந்தெடுக்கவும்:",
+    deleting: "பாதுகாப்பாக நீக்க ஒரு {object}-ஐத் தேர்ந்தெடுக்கவும்:",
+    error: "❌ தோல்வி: {message}",
+    success: "✅ {record} வெற்றிகரமாக உருவாக்கப்பட்டது!",
+    deleted: "🗑️ பதிவு நீக்கப்பட்டது: {name} விற்பனையகத்திலிருந்து அகற்றப்பட்டது.",
+    noMatch: "CRM செயல்பாடுகளுக்காக நான் காத்திருக்கிறேன். புதியவைகளுக்கு '+' மெனுவைப் பயன்படுத்தவும்."
+  },
+  hi: {
+    welcome: "👋 नमस्ते! मैं आपका एनालिटिक्स एआई हूं। मुझसे राजस्व या सीआरएम संचालन के बारे में पूछें!",
+    creating: "{object} बनाने की प्रक्रिया शुरू हो रही है...",
+    updating: "कृपया वह {object} चुनें जिसे आप बदलना चाहते हैं:",
+    deleting: "सुरक्षित रूप से हटाने के लिए एक {object} चुनें:",
+    error: "❌ विफल: {message}",
+    success: "✅ {record} सफलतापूर्वक बनाया गया!",
+    deleted: "🗑️ रिकॉर्ड हटा दिया गया: {name} को सेल्सफोर्स से हटा दिया गया है।",
+    noMatch: "मैं CRM संचालन के लिए तैयार हूं। नई चीज़ों के लिए '+' मेनू का उपयोग करें।"
+  }
 }
 
-function Campaigns({ isConnected, leads }) {
-    const campaigns = [
-        { name: 'Q2 Enterprise Outreach', status: 'Active', leads: leads.length, conv: '18.5%', color: '#4F46E5' },
-        { name: 'SaaS Referral Program', status: 'On Hold', leads: 420, conv: '12.2%', color: '#10B981' },
-        { name: 'Tech Conf 2024 Leads', status: 'Completed', leads: 850, conv: '24.8%', color: '#F59E0B' },
-    ]
-    return (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {campaigns.map((c, i) => (
-                <div key={i} className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-xl transition-all">
-                    <div className="flex justify-between items-start mb-6">
-                        <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-md shadow-indigo-100" style={{ background: c.color }}>
-                            <Target size={20} />
-                        </div>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border ${c.status === 'Active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-gray-50 text-gray-400 border-gray-100'}`}>
-                            {c.status.toUpperCase()}
-                        </span>
-                    </div>
-                    <h4 className="text-base font-bold text-gray-900 mb-4">{c.name}</h4>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="p-3 rounded-xl bg-gray-50 border border-gray-100">
-                            <div className="text-[9px] font-bold text-gray-400 uppercase mb-1">Impact</div>
-                            <div className="text-sm font-extrabold text-gray-900">{c.leads} leads</div>
-                        </div>
-                        <div className="p-3 rounded-xl bg-gray-50 border border-gray-100">
-                            <div className="text-[9px] font-bold text-gray-400 uppercase mb-1">Conv. Rate</div>
-                            <div className="text-sm font-extrabold text-emerald-600">{c.conv}</div>
-                        </div>
-                    </div>
-                </div>
+function ChatTable({ data, title, object }) {
+  if (!data || data.length === 0) return <div className="text-[10px] font-bold text-slate-400 uppercase p-4 italic">No results found in ${object}s.</div>
+  const cols = Object.keys(data[0]).filter(k => k !== 'Id' && k !== 'attributes' && typeof data[0][k] !== 'object').slice(0, 4)
+  return (
+    <div className="bg-white border border-slate-100 rounded-[32px] shadow-xl overflow-hidden w-full max-w-lg mb-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
+      <div className="bg-slate-50/50 px-6 py-4 border-b border-slate-50 flex items-center justify-between">
+        <h5 className="text-[11px] font-black text-slate-800 uppercase tracking-widest">{title}</h5>
+        <span className="text-[9px] font-black text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full">{data.length} RECORDS</span>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-[11px]">
+          <thead>
+            <tr className="border-b border-gray-50 bg-gray-50/20">
+              {cols.map(c => <th key={c} className="px-6 py-3 font-black text-slate-400 uppercase tracking-tighter">{c}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {data.slice(0, 5).map((row, idx) => (
+              <tr key={idx} className="hover:bg-slate-50 transition-colors border-b border-gray-50 last:border-0">
+                {cols.map(c => <td key={c} className="px-6 py-4 font-bold text-slate-600 truncate max-w-[120px]">{row[c] || '-'}</td>)}
+              </tr>
             ))}
-        </div>
-    )
-}
-
-function KPIModal({ kpi, onClose, channelData, onViewDetails }) {
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-gray-900/40 backdrop-blur-md animate-fade-in" onClick={onClose} />
-            <div className="bg-white w-full max-w-lg rounded-[32px] overflow-hidden shadow-2xl animate-scale-up relative z-10 border border-white/20">
-                <div className="h-32 relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${kpi.color}, #7C3AED)` }}>
-                    <div className="absolute top-0 right-0 p-8 opacity-20"><ZapIcon size={120} color="#fff" /></div>
-                    <button onClick={onClose} className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center bg-white/20 rounded-full text-white hover:bg-white/40 transition-colors">
-                        <Plus className="rotate-45" size={18} />
-                    </button>
-                    <div className="absolute bottom-6 left-8">
-                        <div className="text-[10px] font-bold text-white/70 uppercase tracking-widest mb-1">{kpi.label} Summary</div>
-                        <h2 className="text-3xl font-black text-white tracking-tight">{kpi.value}</h2>
-                    </div>
-                </div>
-                <div className="p-8 space-y-6">
-                    <div className="flex items-center justify-between p-5 bg-gray-50 rounded-2xl border border-gray-100">
-                        <div>
-                            <div className="text-[10px] font-bold text-gray-400 uppercase mb-1">Monthly Progression</div>
-                            <div className="flex items-center gap-2">
-                                <span className={`text-lg font-bold ${kpi.positive ? 'text-emerald-600' : 'text-red-500'}`}>{kpi.change}</span>
-                                <span className="text-xs text-gray-400 font-medium">vs Last Month</span>
-                            </div>
-                        </div>
-                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${kpi.bgColor}`}>
-                            <kpi.icon size={22} style={{ color: kpi.color }} />
-                        </div>
-                    </div>
-
-                    <div>
-                        <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 px-1">Top Contributing Channels</h4>
-                        <div className="space-y-3">
-                            {channelData.slice(0, 3).map((c, i) => (
-                                <div key={i} className="group">
-                                    <div className="flex justify-between items-center mb-1.5 px-1">
-                                        <span className="text-xs font-bold text-gray-700">{c.name}</span>
-                                        <span className="text-xs font-extrabold text-indigo-600">{c.value}%</span>
-                                    </div>
-                                    <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                                        <div className="h-full bg-indigo-500 rounded-full transition-all duration-1000" style={{ width: `${c.value}%`, background: `linear-gradient(90deg, ${kpi.color}, #7C3AED)` }} />
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                    <div className="flex gap-3 pt-2">
-                        <button onClick={onViewDetails} className="flex-1 py-3.5 bg-indigo-600 text-white rounded-2xl text-xs font-bold shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center justify-center gap-2">
-                            View Full Drill-down <ArrowUpRight size={14} />
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    )
-}
-
-function ConnectSalesforceModal({ onClose, onLoad }) {
-  const [csvText, setCsvText] = useState('')
-  const [isSyncing, setIsSyncing] = useState(false)
-
-  const handleOAuth = () => {
-    window.location.href = 'http://localhost:3001/auth'
-  }
-
-  const handleCsvSync = () => {
-    if (!csvText.trim()) return alert("Please paste CSV data first!")
-    setIsSyncing(true)
-    setTimeout(() => {
-      const rows = csvText.split('\n').slice(1).filter(r => r.length > 5)
-      const leads = rows.map(r => {
-        const cols = r.split(',')
-        return { Name: cols[0], Company: cols[1], Email: cols[2], Status: cols[3], Rating: cols[4] }
-      })
-      onLoad(leads, 'csv')
-      setIsSyncing(false)
-    }, 1500)
-  }
-
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-gray-900/60 backdrop-blur-lg animate-fade-in" onClick={onClose} />
-      <div className="bg-white w-full max-w-xl rounded-[40px] shadow-2xl relative z-10 overflow-hidden animate-slide-up border border-white/20">
-        <div className="p-10">
-          <div className="flex justify-center mb-8">
-            <div className="w-20 h-20 rounded-[30px] bg-indigo-50 flex items-center justify-center text-indigo-600 shadow-inner relative">
-              <Cloud size={32} />
-              <div className="absolute -top-1 -right-1 w-6 h-6 bg-emerald-500 rounded-full border-4 border-white flex items-center justify-center text-[10px] text-white">✓</div>
-            </div>
-          </div>
-          <div className="text-center mb-10">
-            <h2 className="text-3xl font-black text-gray-900 font-heading mb-3 tracking-tight">Salesforce Hub</h2>
-            <p className="text-sm text-gray-500 font-medium max-w-sm mx-auto">Connect your life production environment for real-time AI analytics extraction.</p>
-          </div>
-
-          <div className="space-y-4">
-            <button onClick={handleOAuth} className="w-full p-6 rounded-3xl bg-gradient-to-br from-indigo-600 to-violet-700 text-white shadow-xl shadow-indigo-200 hover:scale-[1.02] transition-all flex items-center gap-6 group">
-              <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md group-hover:scale-110 transition-transform">
-                <Lock size={20} />
-              </div>
-              <div className="text-left">
-                <div className="text-base font-bold mb-0.5">Secure OAuth 2.0 PKCE Sync</div>
-                <div className="text-[11px] font-bold text-white/70 uppercase tracking-widest">Recommended · Enterprise Grade</div>
-              </div>
-              <ChevronRight className="ml-auto opacity-40" />
-            </button>
-
-            <div className="relative py-4 flex items-center">
-              <div className="flex-1 h-px bg-gray-100" />
-              <span className="px-4 text-[10px] font-black text-gray-300 uppercase tracking-[0.2em]">OR MANUAL INGESTION</span>
-              <div className="flex-1 h-px bg-gray-100" />
-            </div>
-
-            <div className="bg-gray-50 rounded-3xl p-6 border border-gray-100">
-               <textarea value={csvText} onChange={e => setCsvText(e.target.value)} 
-                 placeholder="Paste CSV: Name,Company,Email,Status,Rating..." 
-                 className="w-full h-24 bg-transparent outline-none text-xs text-gray-600 font-mono resize-none" />
-               <button onClick={handleCsvSync} disabled={isSyncing} className="w-full mt-4 py-3 bg-white border border-gray-200 text-indigo-600 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-gray-50 transition-all flex items-center justify-center gap-2 shadow-sm">
-                 {isSyncing ? <><RefreshCw className="animate-spin" size={14} /> Analyzing Data...</> : <><Database size={14} /> Parse & Sync CSV</>}
-               </button>
-            </div>
-          </div>
-
-          <button onClick={onClose} className="w-full mt-8 py-2 text-xs font-bold text-gray-400 hover:text-gray-600 transition-colors uppercase tracking-widest">Maybe Later</button>
-        </div>
+          </tbody>
+        </table>
       </div>
+      {data.length > 5 && <div className="p-3 text-center border-t border-gray-50 text-[10px] font-black text-indigo-400 uppercase tracking-widest hover:bg-slate-50 cursor-pointer">View full report on Dashboard</div>}
     </div>
   )
 }
 
-function LeadChatForm({ onComplete, onCancel }) {
-  const [form, setForm] = useState({ firstName: '', lastName: '', company: '', email: '', phone: '' })
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-
-  const submit = async () => {
-    if (!form.lastName || !form.company) { setError('Last Name and Company are required.'); return }
-    setLoading(true); setError('')
-    try {
-      const res = await fetch('http://localhost:3001/api/leads', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form)
-      })
-      const data = await res.json()
-      if (data.success) {
-        onComplete(`🎉 Successfully created lead **${form.firstName} ${form.lastName}** from **${form.company}**! Sync complete.`)
-      } else { setError(data.error); setLoading(false) }
-    } catch (e) { setError('Connection failed.'); setLoading(false) }
-  }
-
-  return (
-    <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm space-y-3 my-2 border-l-4 border-indigo-600">
-      <div className="flex items-center gap-2 mb-1">
-        <UserPlus size={14} className="text-indigo-600" />
-        <span className="text-[10px] font-bold text-indigo-600 uppercase">New Lead Entry</span>
-      </div>
-      <div className="grid grid-cols-2 gap-2">
-        <div>
-          <label className="text-[10px] font-bold text-gray-400 uppercase">First Name</label>
-          <input className="w-full bg-gray-50 border border-gray-100 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-indigo-400"
-            value={form.firstName} onChange={e => setForm({ ...form, firstName: e.target.value })} placeholder="John" />
-        </div>
-        <div>
-          <label className="text-[10px] font-bold text-gray-400 uppercase">Last Name *</label>
-          <input className="w-full bg-gray-50 border border-gray-100 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-indigo-400"
-            value={form.lastName} onChange={e => setForm({ ...form, lastName: e.target.value })} placeholder="Doe" />
-        </div>
-      </div>
-      <div>
-        <label className="text-[10px] font-bold text-gray-400 uppercase">Company *</label>
-        <input className="w-full bg-gray-50 border border-gray-100 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-indigo-400"
-          value={form.company} onChange={e => setForm({ ...form, company: e.target.value })} placeholder="Acme Corp" />
-      </div>
-      <div className="flex gap-2 pt-1">
-        <button onClick={submit} disabled={loading} className="flex-1 py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700">
-          {loading ? 'Saving...' : 'Save Lead'}
-        </button>
-        <button onClick={onCancel} className="px-4 py-2 border border-gray-100 text-gray-500 rounded-lg text-xs font-bold hover:bg-gray-50">Cancel</button>
-      </div>
-    </div>
-  )
-}
-
-function AccountChatForm({ onComplete, onCancel }) {
-  const [form, setForm] = useState({ name: '', industry: '', website: '', phone: '' })
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-
-  const submit = async () => {
-    if (!form.name) { setError('Account Name is required.'); return }
-    setLoading(true); setError('')
-    try {
-      const res = await fetch('http://localhost:3001/api/accounts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form)
-      })
-      const data = await res.json()
-      if (data.success) {
-        onComplete(`🏢 Created Account **${form.name}**! It's now live in Salesforce.`)
-      } else { setError(data.error); setLoading(false) }
-    } catch (e) { setError('Connection failed.'); setLoading(false) }
-  }
-
-  return (
-    <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm space-y-3 my-2 border-l-4 border-emerald-500">
-      <div className="flex items-center gap-2 mb-1">
-        <Building2 size={14} className="text-emerald-600" />
-        <span className="text-[10px] font-bold text-emerald-600 uppercase">New Account Record</span>
-      </div>
-      <div>
-        <label className="text-[10px] font-bold text-gray-400 uppercase">Account Name *</label>
-        <input className="w-full bg-gray-50 border border-gray-100 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-emerald-400"
-          value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Acme Corp" />
-      </div>
-      <div className="grid grid-cols-2 gap-2">
-        <div>
-          <label className="text-[10px] font-bold text-gray-400 uppercase">Industry</label>
-          <input className="w-full bg-gray-50 border border-gray-100 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-emerald-400"
-            value={form.industry} onChange={e => setForm({ ...form, industry: e.target.value })} placeholder="Technology" />
-        </div>
-        <div>
-          <label className="text-[10px] font-bold text-gray-400 uppercase">Phone</label>
-          <input className="w-full bg-gray-50 border border-gray-100 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-emerald-400"
-            value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} placeholder="+1..." />
-        </div>
-      </div>
-      {error && <p className="text-[10px] text-red-500 font-bold">{error}</p>}
-      <div className="flex gap-2 pt-1">
-        <button onClick={submit} disabled={loading} className="flex-1 py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 transition-colors">
-          {loading ? 'Saving...' : 'Create Account'}
-        </button>
-        <button onClick={onCancel} className="px-4 py-2 border border-gray-100 text-gray-500 rounded-lg text-xs font-bold hover:bg-gray-50 transition-colors">Cancel</button>
-      </div>
-    </div>
-  )
-}
-
-function ContactChatForm({ onComplete, onCancel }) {
-  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '' })
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-
-  const submit = async () => {
-    if (!form.lastName) { setError('Last Name is required.'); return }
-    setLoading(true); setError('')
-    try {
-      const res = await fetch('http://localhost:3001/api/contacts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form)
-      })
-      const data = await res.json()
-      if (data.success) {
-        onComplete(`👥 Created Contact **${form.firstName} ${form.lastName}**! Successfully synced.`)
-      } else { setError(data.error); setLoading(false) }
-    } catch (e) { setError('Connection failed.'); setLoading(false) }
-  }
-
-  return (
-    <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm space-y-3 my-2 border-l-4 border-amber-500">
-      <div className="flex items-center gap-2 mb-1">
-        <Contact size={14} className="text-amber-600" />
-        <span className="text-[10px] font-bold text-amber-600 uppercase">New Contact Record</span>
-      </div>
-      <div className="grid grid-cols-2 gap-2">
-        <div>
-          <label className="text-[10px] font-bold text-gray-400 uppercase">First Name</label>
-          <input className="w-full bg-gray-50 border border-gray-100 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-amber-400"
-            value={form.firstName} onChange={e => setForm({ ...form, firstName: e.target.value })} placeholder="John" />
-        </div>
-        <div>
-          <label className="text-[10px] font-bold text-gray-400 uppercase">Last Name *</label>
-          <input className="w-full bg-gray-50 border border-gray-100 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-amber-400"
-            value={form.lastName} onChange={e => setForm({ ...form, lastName: e.target.value })} placeholder="Doe" />
-        </div>
-      </div>
-      <div>
-        <label className="text-[10px] font-bold text-gray-400 uppercase">Email</label>
-        <input className="w-full bg-gray-50 border border-gray-100 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-amber-400"
-          value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder="john@example.com" />
-      </div>
-      {error && <p className="text-[10px] text-red-500 font-bold">{error}</p>}
-      <div className="flex gap-2 pt-1">
-        <button onClick={submit} disabled={loading} className="flex-1 py-2 bg-amber-600 text-white rounded-lg text-xs font-bold hover:bg-amber-700 transition-colors">
-          {loading ? 'Saving...' : 'Create Contact'}
-        </button>
-        <button onClick={onCancel} className="px-4 py-2 border border-gray-100 text-gray-500 rounded-lg text-xs font-bold hover:bg-gray-50 transition-colors">Cancel</button>
-      </div>
-    </div>
-  )
-}
-
-function EventChatForm({ onComplete, onCancel }) {
-  const [form, setForm] = useState({ subject: '', startDateTime: '', endDateTime: '', location: '' })
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-
-  const submit = async () => {
-    if (!form.subject || !form.startDateTime || !form.endDateTime) { setError('Subject and Times are required.'); return }
-    setLoading(true); setError('')
-    try {
-      const res = await fetch('http://localhost:3001/api/events', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form)
-      })
-      const data = await res.json()
-      if (data.success) {
-        onComplete(`📅 Scheduled **${form.subject}**! Meeting added to Salesforce calendar.`)
-      } else { setError(data.error); setLoading(false) }
-    } catch (e) { setError('Connection failed.'); setLoading(false) }
-  }
-
-  return (
-    <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm space-y-3 my-2 border-l-4 border-indigo-500">
-      <div className="flex items-center gap-2 mb-1">
-        <CalendarIcon size={14} className="text-indigo-600" />
-        <span className="text-[10px] font-bold text-indigo-600 uppercase">Schedule New Event</span>
-      </div>
-      <div>
-        <label className="text-[10px] font-bold text-gray-400 uppercase">Subject *</label>
-        <input className="w-full bg-gray-50 border border-gray-100 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-indigo-400"
-          value={form.subject} onChange={e => setForm({ ...form, subject: e.target.value })} placeholder="Client Strategy Meeting" />
-      </div>
-      <div className="grid grid-cols-1 gap-2">
-        <div>
-          <label className="text-[10px] font-bold text-gray-400 uppercase">Start Date/Time *</label>
-          <input type="datetime-local" className="w-full bg-gray-50 border border-gray-100 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-indigo-400"
-            value={form.startDateTime} onChange={e => setForm({ ...form, startDateTime: e.target.value })} />
-        </div>
-        <div>
-          <label className="text-[10px] font-bold text-gray-400 uppercase">End Date/Time *</label>
-          <input type="datetime-local" className="w-full bg-gray-50 border border-gray-100 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-indigo-400"
-            value={form.endDateTime} onChange={e => setForm({ ...form, endDateTime: e.target.value })} />
-        </div>
-      </div>
-      {error && <p className="text-[10px] text-red-500 font-bold">{error}</p>}
-      <div className="flex gap-2 pt-1">
-        <button onClick={submit} disabled={loading} className="flex-1 py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 transition-colors">
-          {loading ? 'Scheduling...' : 'Confirm Schedule'}
-        </button>
-        <button onClick={onCancel} className="px-4 py-2 border border-gray-100 text-gray-500 rounded-lg text-xs font-bold hover:bg-gray-50 transition-colors">Cancel</button>
-      </div>
-    </div>
-  )
-}
-
-function FileChatForm({ onComplete, onCancel }) {
+function FileUpload({ onComplete, onCancel }) {
   const [file, setFile] = useState(null)
-  const [name, setName] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [uploading, setUploading] = useState(false)
 
-  const handleFileChange = (e) => {
-    const f = e.target.files[0]
-    if (f) {
-      if (f.size > 5 * 1024 * 1024) {
-        setError('File too large (> 5MB). Please select a smaller file.')
-        return
-      }
-      setFile(f)
-      setName(f.name)
-      setError('')
-    }
-  }
-
-  const submit = async () => {
-    if (!file) { setError('Please select a file first.'); return }
-    setLoading(true); setError('')
-
+  const handleUpload = async () => {
+    if (!file) return
+    setUploading(true)
     try {
       const reader = new FileReader()
-      reader.onloadend = async () => {
-        const base64Content = reader.result.split(',')[1]
+      reader.onload = async (e) => {
+        const base64 = e.target.result.split(',')[1]
         const res = await fetch('http://localhost:3001/api/files', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, content: base64Content })
+          body: JSON.stringify({ name: file.name, content: base64 })
         })
-        const data = await res.json()
-        if (data.success) {
-          onComplete(`📄 Uploaded **${name}**! It's now available in your Salesforce Files.`)
-        } else { setError(data.error); setLoading(false) }
+        if (res.ok) onComplete(`✅ **File Uploaded:** ${file.name} attached to Salesforce successfully.`)
       }
       reader.readAsDataURL(file)
-    } catch (e) { setError('Upload failed.'); setLoading(false) }
+    } catch (e) { }
   }
 
   return (
-    <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm space-y-3 my-2 border-l-4 border-blue-400">
-      <div className="flex items-center gap-2 mb-1">
-        <UploadCloud size={14} className="text-blue-500" />
-        <span className="text-[10px] font-bold text-blue-500 uppercase">Upload Salesforce File</span>
+    <div className="p-8 bg-white rounded-[40px] border border-slate-100 shadow-2xl space-y-6 w-full max-w-xl">
+      <div className="flex items-center gap-4">
+        <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600"><FileText size={24} /></div>
+        <div>
+          <h4 className="font-black text-slate-800 uppercase text-[11px] tracking-widest">Chatbot File Sync</h4>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Secure Salesforce Upload</p>
+        </div>
       </div>
-      <div className="border-2 border-dashed border-blue-50/50 rounded-xl p-6 bg-blue-50/10 flex flex-col items-center justify-center gap-2 transition-colors hover:bg-blue-50/30 relative">
-        <input type="file" onChange={handleFileChange} className="absolute inset-0 opacity-0 cursor-pointer" />
-        <Bot size={24} className="text-blue-400 opacity-50" />
-        <span className="text-xs font-bold text-blue-600">{file ? file.name : 'Click or Drag to Upload'}</span>
-        <span className="text-[9px] text-gray-400 uppercase font-bold">Max Size: 5MB</span>
+      <div className="p-8 border-2 border-dashed border-slate-100 rounded-[32px] text-center hover:border-indigo-200 transition-colors cursor-pointer relative group">
+        <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={e => setFile(e.target.files[0])} />
+        <Upload size={32} className="mx-auto text-slate-200 group-hover:text-indigo-400 transition-all mb-2" />
+        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{file ? file.name : "Drop file or Click to Browse"}</p>
       </div>
-      {error && <p className="text-[10px] text-red-500 font-bold">{error}</p>}
-      <div className="flex gap-2 pt-1">
-        <button onClick={submit} disabled={loading || !file} className="flex-1 py-2 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 disabled:opacity-50">
-          {loading ? 'Uploading...' : 'Upload to Salesforce'}
-        </button>
-        <button onClick={onCancel} className="px-4 py-2 border border-gray-100 text-gray-500 rounded-lg text-xs font-bold hover:bg-gray-50">Cancel</button>
+      <div className="flex gap-3">
+        <button onClick={handleUpload} disabled={!file || uploading} className="flex-1 bg-indigo-600 text-white py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-indigo-100 disabled:opacity-30">{uploading ? 'Uploading...' : 'Confirm Upload'}</button>
+        <button onClick={onCancel} className="px-6 bg-slate-50 text-slate-400 py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest">Cancel</button>
       </div>
     </div>
   )
 }
 
-function TaskChatForm({ onComplete, onCancel }) {
-  const [form, setForm] = useState({ subject: '', priority: 'Normal', status: 'Not Started', dueDate: new Date().toISOString().split('T')[0] })
+function DetailedForm({ title, fields, initialData, onComplete, onCancel, icon: Icon, object, method = 'POST', refresh }) {
+  const [form, setForm] = useState(initialData || {})
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-
-  const priorities = ['High', 'Normal', 'Low']
-
-  const submit = async () => {
-    if (!form.subject) { setError('Subject is required.'); return }
-    setLoading(true); setError('')
-    try {
-      const res = await fetch('http://localhost:3001/api/tasks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form)
-      })
-      const data = await res.json()
-      if (data.success) {
-        onComplete(`📝 Task **${form.subject}** created! Priority: **${form.priority}**. Successfully synced with your Salesforce Task list.`)
-      } else { setError(data.error); setLoading(false) }
-    } catch (e) { setError('Connection failed.'); setLoading(false) }
-  }
-
-  return (
-    <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm space-y-3 my-2 border-l-4 border-amber-500">
-      <div className="flex items-center gap-2 mb-1">
-        <ClipboardList size={14} className="text-amber-600" />
-        <span className="text-[10px] font-bold text-amber-600 uppercase">Create Salesforce Task</span>
-      </div>
-      <div>
-        <label className="text-[10px] font-bold text-gray-400 uppercase">Subject *</label>
-        <input className="w-full bg-gray-50 border border-gray-100 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-amber-400"
-          value={form.subject} onChange={e => setForm({ ...form, subject: e.target.value })} placeholder="Follow up on Q2 Proposal" />
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="text-[10px] font-bold text-gray-400 uppercase">Priority</label>
-          <select className="w-full bg-gray-50 border border-gray-100 rounded-lg px-3 py-1.5 text-xs outline-none"
-            value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value })}>
-            {priorities.map(p => <option key={p} value={p}>{p}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="text-[10px] font-bold text-gray-400 uppercase">Due Date</label>
-          <input type="date" className="w-full bg-gray-50 border border-gray-100 rounded-lg px-3 py-1.5 text-xs outline-none"
-            value={form.dueDate} onChange={e => setForm({ ...form, dueDate: e.target.value })} />
-        </div>
-      </div>
-      {error && <p className="text-[10px] text-red-500 font-bold">{error}</p>}
-      <div className="flex gap-2 pt-1">
-        <button onClick={submit} disabled={loading} className="flex-1 py-2 bg-amber-600 text-white rounded-lg text-xs font-bold hover:bg-amber-700 transition-colors">
-          {loading ? 'Creating...' : 'Create Task'}
-        </button>
-        <button onClick={onCancel} className="px-4 py-2 border border-gray-100 text-gray-500 rounded-lg text-xs font-bold hover:bg-gray-50 transition-colors">Cancel</button>
-      </div>
-    </div>
-  )
-}
-
-
-function OpportunityChatForm({ onComplete, onCancel }) {
-  const [form, setForm] = useState({ name: '', amount: '', stage: 'Qualification', closeDate: new Date().toISOString().split('T')[0] })
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-
-  const stages = ['Qualification', 'Needs Analysis', 'Proposal/Price Quote', 'Negotiation/Review', 'Closed Won', 'Closed Lost']
-
-  const submit = async () => {
-    if (!form.name || !form.stage || !form.closeDate) { setError('Name, Stage, and Close Date are required.'); return }
-    setLoading(true); setError('')
-    try {
-      const res = await fetch('http://localhost:3001/api/opportunities', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form)
-      })
-      const data = await res.json()
-      if (data.success) {
-        onComplete(`💼 Created Opportunity **${form.name}**! Amount: **$${parseFloat(form.amount || 0).toLocaleString()}**. Live sync confirmed.`)
-      } else { setError(data.error); setLoading(false) }
-    } catch (e) { setError('Connection failed.'); setLoading(false) }
-  }
-
-  return (
-    <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm space-y-3 my-2 border-l-4 border-emerald-500">
-      <div className="flex items-center gap-2 mb-1">
-        <Briefcase size={14} className="text-emerald-600" />
-        <span className="text-[10px] font-bold text-emerald-600 uppercase">Create Salesforce Opportunity</span>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div className="col-span-2">
-          <label className="text-[10px] font-bold text-gray-400 uppercase">Opportunity Name *</label>
-          <input className="w-full bg-gray-50 border border-gray-100 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-emerald-400"
-            value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Q2 Enterprise Deal" />
-        </div>
-        <div>
-          <label className="text-[10px] font-bold text-gray-400 uppercase">Amount ($)</label>
-          <input type="number" className="w-full bg-gray-50 border border-gray-100 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-emerald-400"
-            value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} placeholder="50000" />
-        </div>
-        <div>
-          <label className="text-[10px] font-bold text-gray-400 uppercase">Close Date *</label>
-          <input type="date" className="w-full bg-gray-50 border border-gray-100 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-emerald-400"
-            value={form.closeDate} onChange={e => setForm({ ...form, closeDate: e.target.value })} />
-        </div>
-        <div className="col-span-2">
-          <label className="text-[10px] font-bold text-gray-400 uppercase">Sales Stage *</label>
-          <select className="w-full bg-gray-50 border border-gray-100 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-emerald-400"
-            value={form.stage} onChange={e => setForm({ ...form, stage: e.target.value })}>
-            {stages.map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
-        </div>
-      </div>
-      {error && <p className="text-[10px] text-red-500 font-bold">{error}</p>}
-      <div className="flex gap-2 pt-1">
-        <button onClick={submit} disabled={loading} className="flex-1 py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 transition-colors">
-          {loading ? 'Creating...' : 'Create Opportunity'}
-        </button>
-        <button onClick={onCancel} className="px-4 py-2 border border-gray-100 text-gray-500 rounded-lg text-xs font-bold hover:bg-gray-50 transition-colors">Cancel</button>
-      </div>
-    </div>
-  )
-}
-
-
-function GroupChatForm({ onComplete, onCancel }) {
-  const [form, setForm] = useState({ name: '', description: '', type: 'Public' })
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-
-  const submit = async () => {
-    if (!form.name) { setError('Group Name is required.'); return }
-    setLoading(true); setError('')
-    try {
-      const res = await fetch('http://localhost:3001/api/groups', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form)
-      })
-      const data = await res.json()
-      if (data.success) {
-        onComplete(`🏛️ Created Group **${form.name}**! Successfully synced with Salesforce.`)
-      } else { setError(data.error); setLoading(false) }
-    } catch (e) { setError('Connection failed.'); setLoading(false) }
-  }
-
-  return (
-    <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm space-y-3 my-2 border-l-4 border-purple-500">
-      <div className="flex items-center gap-2 mb-1">
-        <Users2 size={14} className="text-purple-600" />
-        <span className="text-[10px] font-bold text-purple-600 uppercase">Create Salesforce Group</span>
-      </div>
-      <div>
-        <label className="text-[10px] font-bold text-gray-400 uppercase">Group Name *</label>
-        <input className="w-full bg-gray-50 border border-gray-100 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-purple-400"
-          value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Sales Strategy Team" />
-      </div>
-      <div>
-        <label className="text-[10px] font-bold text-gray-400 uppercase">Description</label>
-        <textarea className="w-full bg-gray-50 border border-gray-100 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-purple-400 h-16 resize-none"
-          value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Purpose of this group..." />
-      </div>
-      <div>
-        <label className="text-[10px] font-bold text-gray-400 uppercase">Access Level</label>
-        <select className="w-full bg-gray-50 border border-gray-100 rounded-lg px-3 py-1.5 text-xs outline-none"
-          value={form.type} onChange={e => setForm({ ...form, type: e.target.value })}>
-          <option value="Public">Public (Anyone can join)</option>
-          <option value="Private">Private (Invite only)</option>
-        </select>
-      </div>
-      {error && <p className="text-[10px] text-red-500 font-bold">{error}</p>}
-      <div className="flex gap-2 pt-1">
-        <button onClick={submit} disabled={loading} className="flex-1 py-2 bg-purple-600 text-white rounded-lg text-xs font-bold hover:bg-purple-700 transition-colors">
-          {loading ? 'Creating...' : 'Create Group'}
-        </button>
-        <button onClick={onCancel} className="px-4 py-2 border border-gray-100 text-gray-500 rounded-lg text-xs font-bold hover:bg-gray-50 transition-colors">Cancel</button>
-      </div>
-    </div>
-  )
-}
-
-
-function LeadUpdateForm({ lead, onComplete, onCancel }) {
-  const [form, setForm] = useState({
-    firstName: lead.FirstName || '',
-    lastName: lead.LastName || '',
-    company: lead.Company || '',
-    email: lead.Email || '',
-    phone: lead.Phone || '',
-    status: lead.Status || 'Open - Not Contacted',
-    rating: lead.Rating || 'Warm'
-  })
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
 
   const submit = async () => {
     setLoading(true)
-    setError('')
     try {
-      const res = await fetch(`http://localhost:3001/api/leads/${lead.Id}`, {
-        method: 'PUT',
+      const url = method === 'PUT' ? `http://localhost:3001/api/${object.toLowerCase()}s/${form.Id}` : `http://localhost:3001/api/${object.toLowerCase()}s`
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form)
       })
       const data = await res.json()
-      if (data.success) {
-        onComplete(`✅ Successfully updated **${form.firstName} ${form.lastName}**! Current status: **${form.status}**.`)
+      if (res.ok) {
+        onComplete(`✅ **Success:** ${title} ${method === 'PUT' ? 'Updated' : 'Created'} successfully. 📋 ID: ${data.id || form.Id || 'NEW'}`)
+        if (refresh) refresh()
       } else {
-        setError(data.error)
-        setLoading(false)
+        throw new Error(data.error || `Server returned ${res.status}`)
       }
     } catch (e) {
-      setError('Update failed.')
-      setLoading(false)
+      console.error(e)
+      onComplete(`❌ **Operation Failed:** ${e.message}. Ensure you are connected to Salesforce and the fields are valid.`)
     }
+    setLoading(false)
   }
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm space-y-3 my-2 border-l-4 border-l-blue-500">
-      <div className="flex items-center justify-between mb-1">
-        <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded uppercase">Update Lead Record</span>
-        <span className="text-[10px] text-gray-400 font-mono">ID: {lead.Id?.substring(0, 8)}...</span>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="text-[9px] font-bold text-gray-400 uppercase">First Name</label>
-          <input className="w-full bg-gray-50 border border-gray-100 rounded-lg px-2 py-1 text-xs outline-none focus:border-indigo-400"
-            value={form.firstName} onChange={e => setForm({ ...form, firstName: e.target.value })} />
+    <div className="p-8 bg-white rounded-[40px] border border-slate-100 shadow-2xl space-y-6 w-full max-w-md animate-in fade-in zoom-in duration-300">
+      <div className="flex items-center gap-4 mb-4">
+        <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600">
+          <Icon size={24} />
         </div>
         <div>
-          <label className="text-[9px] font-bold text-gray-400 uppercase">Last Name</label>
-          <input className="w-full bg-gray-50 border border-gray-100 rounded-lg px-2 py-1 text-xs outline-none focus:border-indigo-400"
-            value={form.lastName} onChange={e => setForm({ ...form, lastName: e.target.value })} />
-        </div>
-        <div className="col-span-2">
-          <label className="text-[9px] font-bold text-gray-400 uppercase">Company</label>
-          <input className="w-full bg-gray-50 border border-gray-100 rounded-lg px-2 py-1 text-xs outline-none focus:border-indigo-400"
-            value={form.company} onChange={e => setForm({ ...form, company: e.target.value })} />
-        </div>
-        <div>
-          <label className="text-[9px] font-bold text-gray-400 uppercase">Status</label>
-          <select className="w-full bg-gray-50 border border-gray-100 rounded-lg px-2 py-1 text-xs outline-none"
-            value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>
-            {['Open - Not Contacted', 'Working - Contacted', 'Closed - Converted', 'Closed - Not Converted'].map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="text-[9px] font-bold text-gray-400 uppercase">Rating</label>
-          <select className="w-full bg-gray-50 border border-gray-100 rounded-lg px-2 py-1 text-xs outline-none"
-            value={form.rating} onChange={e => setForm({ ...form, rating: e.target.value })}>
-            {['Hot', 'Warm', 'Cold'].map(r => <option key={r} value={r}>{r}</option>)}
-          </select>
+          <h4 className="font-black text-slate-800 uppercase text-[11px] tracking-[0.2em]">{title}</h4>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Standard Object Interface</p>
         </div>
       </div>
 
-      <div className="flex gap-2 pt-2">
-        <button onClick={submit} disabled={loading}
-          className="flex-1 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 disabled:opacity-50">
-          Save Changes
-        </button>
-        <button onClick={onCancel} className="px-3 py-1.5 border border-gray-200 text-gray-500 rounded-lg text-xs font-bold">Cancel</button>
-      </div>
-    </div>
-  )
-}
-
-function LeadDeleteConfirm({ lead, onComplete, onCancel }) {
-  const [loading, setLoading] = useState(false)
-
-  const confirmDelete = async () => {
-    setLoading(true)
-    try {
-      const res = await fetch(`http://localhost:3001/api/leads/${lead.Id}`, { method: 'DELETE' })
-      const data = await res.json()
-      if (data.success) {
-        onComplete(`🗑️ Lead **${lead.Name}** from **${lead.Company}** has been removed from your Salesforce database.`)
-      }
-    } catch (e) { console.error(e); setLoading(false) }
-  }
-
-  return (
-    <div className="bg-red-50 rounded-xl border border-red-100 p-4 space-y-3 my-2">
-      <div className="flex items-center gap-2 text-red-600">
-        <AlertTriangle size={16} />
-        <span className="text-xs font-bold uppercase tracking-wide">Confirm Deletion</span>
-      </div>
-      <p className="text-xs text-gray-600 leading-relaxed">
-        Are you sure you want to permanently delete **{lead.Name}**? This action cannot be undone and will affect your live Salesforce data.
-      </p>
-      <div className="flex gap-2">
-        <button onClick={confirmDelete} disabled={loading}
-          className="flex-1 py-2 bg-red-600 text-white rounded-lg text-xs font-bold hover:bg-red-700 disabled:opacity-50">
-          {loading ? 'Deleting...' : 'Yes, Delete Lead'}
-        </button>
-        <button onClick={onCancel} className="px-4 py-2 bg-white border border-gray-200 text-gray-500 rounded-lg text-xs font-bold">
-          Cancel
-        </button>
-      </div>
-    </div>
-  )
-}
-
-function LeadSelector({ leads, type, onSelect, onCancel }) {
-  return (
-    <div className="bg-indigo-50/30 rounded-xl border border-indigo-100 p-4 space-y-3 my-2">
-      <p className="text-xs font-bold text-indigo-700">Multiple matches found. Select record to {type}:</p>
-      <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-        {leads.map(l => (
-          <button key={l.Id} onClick={() => onSelect(l)}
-            className="w-full text-left p-3 bg-white border border-gray-100 rounded-xl hover:border-indigo-300 hover:shadow-sm transition-all group">
-            <div className="flex justify-between items-center">
-              <div>
-                <div className="text-sm font-bold text-gray-800 group-hover:text-indigo-600">{l.Name}</div>
-                <div className="text-[10px] text-gray-400">{l.Company}</div>
-              </div>
-              <ChevronRight size={14} className="text-gray-300 group-hover:text-indigo-400" />
-            </div>
-          </button>
+      <div className="grid grid-cols-2 gap-4 max-h-[300px] overflow-y-auto px-1 custom-scrollbar">
+        {fields.map(f => (
+          <div key={f.name} className={f.full ? 'col-span-2' : ''}>
+            <label className="text-[9px] font-black text-slate-300 uppercase tracking-widest ml-1 mb-1 block">{f.label}{f.required ? '*' : ''}</label>
+            {f.type === 'select' ? (
+              <select className="w-full bg-slate-50 p-4 text-xs rounded-2xl border-none outline-none focus:ring-4 ring-indigo-50 font-black tracking-tight transition-all" value={form[f.name] || ''} onChange={e => setForm({ ...form, [f.name]: e.target.value })}>
+                <option value="">--None--</option>
+                {f.options.map(o => <option key={o} value={o}>{o}</option>)}
+              </select>
+            ) : f.type === 'textarea' ? (
+              <textarea className="w-full bg-slate-50 p-4 text-xs rounded-2xl border-none outline-none focus:ring-4 ring-indigo-50 font-bold min-h-[80px]" value={form[f.name] || ''} onChange={e => setForm({ ...form, [f.name]: e.target.value })} placeholder={f.placeholder} />
+            ) : (
+              <input
+                type={f.type || 'text'}
+                className="w-full bg-slate-50 p-4 text-xs rounded-2xl border-none outline-none focus:ring-4 ring-indigo-50 font-black tracking-tight transition-all placeholder-slate-200"
+                placeholder={f.placeholder}
+                value={form[f.name] || ''}
+                onChange={e => setForm({ ...form, [f.name]: e.target.value })}
+              />
+            )}
+          </div>
         ))}
       </div>
-      <button onClick={onCancel} className="w-full py-1.5 text-[10px] font-bold text-gray-400 uppercase hover:text-gray-600">Cancel Selection</button>
+
+      <div className="flex gap-3 pt-4 border-t border-slate-50">
+        <button onClick={submit} disabled={loading} className="flex-1 bg-indigo-600 text-white py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest shadow-xl shadow-indigo-100 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50">
+          {loading ? 'Processing...' : method === 'PUT' ? 'Confirm Update' : 'Create Record'}
+        </button>
+        <button onClick={onCancel} className="px-6 bg-slate-50 text-slate-400 py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-100 transition-colors">Cancel</button>
+      </div>
+    </div>
+  )
+}
+
+function RecordSelector({ type, onSelect, onCancel, title }) {
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState([])
+  const [searching, setSearching] = useState(false)
+
+  const search = async () => {
+    setSearching(true)
+    try {
+      const endpoint = type === 'Lead' ? 'leads' : type === 'Account' ? 'accounts' : type === 'Opportunity' ? 'opportunities' : type === 'Contact' ? 'contacts' : type === 'Task' ? 'tasks' : 'events'
+      const res = await fetch(`http://localhost:3001/api/${endpoint}`)
+      const data = await res.json()
+      if (data.success) {
+        const records = data.leads || data.accounts || data.opportunities || data.contacts || data.tasks || data.events || []
+        setResults(records.filter(r => (r.Name || r.LastName || r.Subject || '').toLowerCase().includes(query.toLowerCase())))
+      }
+    } catch (e) { }
+    setSearching(false)
+  }
+
+  return (
+    <div className="p-8 bg-white rounded-[40px] border border-slate-100 shadow-2xl space-y-6 w-full max-w-xl animate-in zoom-in duration-300">
+      <div className="text-[11px] font-black text-slate-800 uppercase tracking-widest mb-2 px-1">{title}</div>
+      <div className="flex gap-2">
+        <input className="flex-1 bg-slate-50 p-4 text-xs rounded-2xl outline-none focus:ring-4 ring-indigo-50 font-black tracking-tight" placeholder={`Search ${type}...`} value={query} onChange={e => setQuery(e.target.value)} />
+        <button onClick={search} className="p-4 bg-indigo-600 text-white rounded-2xl shadow-lg shadow-indigo-100 active:scale-90 transition-all"><Search size={18} /></button>
+      </div>
+      <div className="max-h-48 overflow-y-auto space-y-2 custom-scrollbar pr-2">
+        {results.map(r => (
+          <button key={r.Id} onClick={() => onSelect(r)} className="w-full text-left p-4 rounded-2xl hover:bg-indigo-50 transition-all border border-transparent hover:border-indigo-100 group flex items-center justify-between">
+            <div>
+              <div className="font-black text-slate-800 text-[13px]">{r.Name || r.LastName || r.Subject}</div>
+              <div className="text-[10px] font-bold text-slate-300 uppercase tracking-tight">{r.Company || r.Industry || r.StageName || r.Status || 'CRM Record'}</div>
+            </div>
+            <ChevronRight size={14} className="text-slate-200 group-hover:text-indigo-600 translate-x-0 group-hover:translate-x-1 transition-all" />
+          </button>
+        ))}
+        {results.length === 0 && !searching && <div className="text-center py-8 text-[10px] font-black text-slate-200 uppercase tracking-widest border-2 border-dashed border-slate-50 rounded-[32px]">No records found</div>}
+      </div>
+      <button onClick={onCancel} className="w-full py-4 text-[11px] font-black text-slate-300 uppercase tracking-widest hover:text-rose-500 transition-colors">Abort Operation</button>
+    </div>
+  )
+}
+
+// ── NEW: MAIN REGISTRY TABLE FOR ALL OBJECTS ──
+
+const MainRegistryTable = ({ title, data, columns, onSearch, icon: Icon, onAdd, onWipeAll, onActionClick }) => (
+  <div className="bg-white rounded-[48px] border border-gray-100 overflow-hidden shadow-sm shadow-slate-200/10 animate-in fade-in duration-700">
+    <div className="px-10 py-8 border-b border-gray-50 flex flex-col md:flex-row justify-between items-center gap-4">
+      <h3 className="font-black text-xl tracking-tight flex items-center gap-3">
+        {Icon && <Icon size={24} className="text-indigo-600" />} {title}
+      </h3>
+      <div className="flex items-center gap-4 w-full md:w-auto">
+        <div className="flex-1 md:flex-none relative flex items-center bg-gray-50 rounded-2xl px-4 py-2 border border-slate-200 shadow-inner">
+          <Search size={14} className="text-slate-300" />
+          <input
+            className="bg-transparent text-xs px-2 outline-none w-full md:w-48 font-bold"
+            placeholder={`Search ${title.toLowerCase()}...`}
+            onChange={e => onSearch && onSearch(e.target.value)}
+          />
+        </div>
+        <button className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white border border-slate-200 text-xs font-black text-slate-600">
+          <Filter size={16} /> Filter
+        </button>
+        {onAdd && (
+          <button
+            onClick={(e) => onAdd(e)}
+            className="flex items-center gap-2 px-6 py-2.5 rounded-2xl bg-indigo-600 text-white text-xs font-black shadow-lg shadow-indigo-100 hover:scale-105 active:scale-95 transition-all"
+          >
+            <Plus size={16} /> New Entry
+          </button>
+        )}
+        {onWipeAll && data.length > 0 && (
+          <button
+            onClick={onWipeAll}
+            className="flex items-center gap-2 px-6 py-2.5 rounded-2xl bg-rose-50 text-rose-600 text-xs font-black border border-rose-100 hover:bg-rose-100 transition-all ml-2"
+          >
+            <Trash2 size={16} /> Clear All
+          </button>
+        )}
+      </div>
+    </div>
+    <div className="overflow-x-auto">
+      <table className="w-full text-left">
+        <thead>
+          <tr className="bg-slate-50/50 text-[10px] font-black uppercase text-slate-400 tracking-[0.2em]">
+            {columns.map(col => <th key={col.key} className="px-10 py-5">{col.label}</th>)}
+            <th className="px-10 py-5 text-right pr-14">Action</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-50">
+          {data.length > 0 ? data.map((row, i) => (
+            <tr key={i} className="hover:bg-indigo-50/10 transition-colors group">
+              {columns.map(col => (
+                <td key={col.key} className="px-10 py-6">
+                  {col.render ? col.render(row) : (
+                    <div className="font-bold text-[13px] text-slate-600 italic">
+                      {String(row[col.key] || '-')}
+                    </div>
+                  )}
+                </td>
+              ))}
+              <td className="px-10 py-6 text-right pr-14">
+                <button 
+                  onClick={(e) => onActionClick && onActionClick(e, row)}
+                  className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all ${row._menuOpen ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-300 hover:text-indigo-600 hover:bg-slate-50'}`}
+                >
+                  <MoreHorizontal size={20} />
+                </button>
+              </td>
+            </tr>
+          )) : (
+            <tr>
+              <td colSpan={columns.length + 1} className="px-10 py-32 text-center">
+                <div className="flex flex-col items-center gap-4">
+                  <div className="w-16 h-16 rounded-[24px] bg-slate-50 flex items-center justify-center text-slate-200">
+                     <Database size={32} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-black text-slate-400 uppercase tracking-widest">No matching Salesforce records discovered</p>
+                    <p className="text-[11px] font-bold text-slate-300 mt-1">Try refreshing the connection or check your Salesforce Org</p>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+    {data.length > 0 && (
+      <div className="px-10 py-6 border-t border-gray-50 flex justify-between items-center text-xs font-black text-slate-400 uppercase tracking-widest">
+        <span>Displaying {data.length} records</span>
+        <div className="flex gap-2">
+          <button className="px-4 py-2 rounded-xl bg-gray-50 disabled:opacity-30" disabled>Previous</button>
+          <button className="px-4 py-2 rounded-xl bg-gray-100 text-slate-900">Next</button>
+        </div>
+      </div>
+    )}
+  </div>
+)
+
+// ── CONTEXTUAL ACTION MENU ──
+function ContextualMenu({ x, y, record, type, onClose, onEdit, onDelete, onStageChange, onSync }) {
+  const containerRef = useRef(null)
+  const [showStageSubmenu, setShowStageSubmenu] = useState(false)
+
+  const stages = ['Prospecting', 'Qualification', 'Needs Analysis', 'Value Proposition', 'Id. Decision Makers', 'Proposal/Price Quote', 'Negotiation/Review', 'Closed Won', 'Closed Lost']
+
+  return (
+    <div
+      className="fixed z-[500] min-w-[180px] bg-white rounded-2xl shadow-[0_12px_40px_-8px_rgba(0,0,0,0.15)] border border-slate-100 py-2 animate-in fade-in zoom-in-95 duration-150"
+      style={{ left: Math.min(x, window.innerWidth - 200), top: y + 8 }}
+      onClick={e => e.stopPropagation()}
+    >
+      <button onClick={() => onEdit(record, type)} className="w-full px-4 py-2.5 text-left flex items-center gap-3 hover:bg-sky-50 text-slate-700 transition-colors group">
+        <Edit3 size={15} className="text-slate-400 group-hover:text-sky-600" />
+        <span className="text-[13px] font-bold">Edit</span>
+      </button>
+
+      {type === 'Opportunity' && (
+        <div className="relative group/sub" onMouseEnter={() => setShowStageSubmenu(true)} onMouseLeave={() => setShowStageSubmenu(false)}>
+          <button className="w-full px-4 py-2.5 text-left flex items-center justify-between hover:bg-sky-50 text-slate-700 transition-colors group">
+            <div className="flex items-center gap-3">
+              <RefreshCw size={15} className="text-slate-400 group-hover:text-sky-600" />
+              <span className="text-[13px] font-bold">Change Stage</span>
+            </div>
+            <ChevronRight size={14} className="text-slate-300" />
+          </button>
+          {showStageSubmenu && (
+            <div className="absolute left-full top-0 ml-1 min-w-[200px] bg-white rounded-2xl shadow-xl border border-slate-100 py-2 animate-in fade-in slide-in-from-left-2 duration-150">
+              {stages.map(s => (
+                <button
+                  key={s}
+                  onClick={() => onStageChange(record, s)}
+                  className={`w-full px-4 py-2 text-left text-[11px] font-black uppercase tracking-widest hover:bg-sky-50 transition-colors ${record.StageName === s ? 'text-indigo-600 bg-indigo-50/50' : 'text-slate-400'}`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      <button onClick={() => onSync(type)} className="w-full px-4 py-2.5 text-left flex items-center gap-3 hover:bg-sky-50 text-slate-700 transition-colors group">
+        <UploadCloud size={15} className="text-slate-400 group-hover:text-sky-600" />
+        <span className="text-[13px] font-bold">Sync to Salesforce</span>
+      </button>
+
+      <div className="my-1 border-t border-slate-50" />
+
+      <button onClick={() => onDelete(record, type)} className="w-full px-4 py-2.5 text-left flex items-center gap-3 hover:bg-rose-50 text-rose-600 transition-colors group">
+        <Trash2 size={15} className="text-rose-400 group-hover:text-rose-600" />
+        <span className="text-[13px] font-bold">Delete</span>
+      </button>
+    </div>
+  )
+}
+
+// ── TOAST NOTIFICATION ──
+function ToastNotification({ message, type, onClose }) {
+  useEffect(() => { const t = setTimeout(onClose, 3000); return () => clearTimeout(t) }, [onClose])
+  return (
+    <div className={`fixed bottom-10 left-1/2 -translate-x-1/2 z-[9999] px-6 py-4 rounded-[28px] shadow-2xl flex items-center gap-3 animate-in slide-in-from-bottom-4 duration-300 ${type === 'success' ? 'bg-emerald-600 text-white' :
+      type === 'error' ? 'bg-rose-600 text-white' :
+        'bg-slate-900 text-white'
+      }`}>
+      {type === 'success' && <CheckCircle size={18} />}
+      {type === 'error' && <AlertCircle size={18} />}
+      {type === 'info' && <Sparkles size={18} />}
+      <span className="text-[13px] font-black">{message}</span>
+    </div>
+  )
+}
+
+// ── CONNECT APP MODAL ──
+function ConnectAppModal({ onClose, onConnect }) {
+  const [step, setStep] = useState(1)
+  const [selected, setSelected] = useState(null)
+  const apps = [
+    { name: 'Stripe', icon: '💳', desc: 'Payment & subscription intelligence', auth: 'API Key' },
+    { name: 'Zapier', icon: '⚡', desc: 'Workflow automation & triggers', auth: 'OAuth' },
+    { name: 'Mailchimp', icon: '📧', desc: 'Email marketing campaigns', auth: 'API Key' },
+    { name: 'Twilio', icon: '📱', desc: 'SMS & voice notifications', auth: 'API Key' },
+    { name: 'Notion', icon: '📄', desc: 'Knowledge base & documentation', auth: 'OAuth' },
+    { name: 'Jira', icon: '🛠️', desc: 'Project & issue tracking', auth: 'OAuth' },
+  ]
+  const [apiKey, setApiKey] = useState('')
+  return (
+    <div className="fixed inset-0 z-[400] flex items-center justify-center p-6" onClick={onClose}>
+      <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" />
+      <div className="relative z-10 w-full max-w-lg bg-white rounded-[40px] shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="px-8 pt-8 pb-6 border-b border-gray-50 flex items-center justify-between">
+          <div>
+            <h3 className="text-xl font-black text-slate-900">{step === 1 ? 'Connect New App' : `Authorize ${selected?.name}`}</h3>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Step {step} of 2</p>
+          </div>
+          <button onClick={onClose} className="w-9 h-9 rounded-2xl bg-slate-50 text-slate-400 hover:bg-slate-100 flex items-center justify-center"><X size={16} /></button>
+        </div>
+        {step === 1 ? (
+          <div className="p-8">
+            <div className="grid grid-cols-2 gap-3">
+              {apps.map(app => (
+                <button key={app.name} onClick={() => { setSelected(app); setStep(2) }}
+                  className="flex items-center gap-4 p-4 rounded-[24px] border border-slate-100 hover:border-indigo-200 hover:bg-indigo-50/30 transition-all text-left group">
+                  <span className="text-2xl">{app.icon}</span>
+                  <div>
+                    <div className="font-black text-[13px] text-slate-800 group-hover:text-indigo-700">{app.name}</div>
+                    <div className="text-[10px] font-bold text-slate-400 mt-0.5">{app.desc}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="p-8 space-y-6">
+            <div className="flex items-center gap-4 p-5 bg-slate-50 rounded-[24px]">
+              <span className="text-3xl">{selected?.icon}</span>
+              <div>
+                <div className="font-black text-[15px] text-slate-800">{selected?.name}</div>
+                <div className="text-[10px] font-bold text-slate-400">{selected?.auth} Authorization</div>
+              </div>
+            </div>
+            {selected?.auth === 'API Key' ? (
+              <div>
+                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 block">{selected?.name} API Key</label>
+                <input value={apiKey} onChange={e => setApiKey(e.target.value)} placeholder="Paste your API key here..." className="w-full bg-slate-50 px-4 py-4 rounded-2xl text-xs font-mono font-bold text-slate-700 border border-slate-100 outline-none focus:ring-4 ring-indigo-50 transition-all" />
+              </div>
+            ) : (
+              <div className="p-5 bg-indigo-50/50 rounded-[24px] border border-indigo-100 text-[12px] font-bold text-indigo-700">
+                You will be redirected to {selected?.name} to authorize Pulsar AI. Click Connect to continue.
+              </div>
+            )}
+            <div className="flex gap-3">
+              <button onClick={() => { onConnect(selected); onClose() }} className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest shadow-lg shadow-indigo-100 hover:scale-[1.02] active:scale-95 transition-all">Connect {selected?.name}</button>
+              <button onClick={() => setStep(1)} className="px-6 py-4 bg-slate-50 text-slate-400 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-100 transition-all">Back</button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── ADD WEBHOOK MODAL ──
+function AddWebhookModal({ onClose, onAdd }) {
+  const [form, setForm] = useState({ event: '', url: '', method: 'POST' })
+  const events = ['lead.created', 'lead.updated', 'opportunity.won', 'opportunity.lost', 'contact.created', 'contact.updated', 'task.completed', 'account.created']
+  return (
+    <div className="fixed inset-0 z-[400] flex items-center justify-center p-6" onClick={onClose}>
+      <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" />
+      <div className="relative z-10 w-full max-w-md bg-white rounded-[40px] shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="px-8 pt-8 pb-6 border-b border-gray-50 flex items-center justify-between">
+          <h3 className="text-xl font-black text-slate-900">Add Webhook</h3>
+          <button onClick={onClose} className="w-9 h-9 rounded-2xl bg-slate-50 text-slate-400 hover:bg-slate-100 flex items-center justify-center"><X size={16} /></button>
+        </div>
+        <div className="p-8 space-y-5">
+          <div>
+            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Event Trigger</label>
+            <select value={form.event} onChange={e => setForm({ ...form, event: e.target.value })} className="w-full bg-slate-50 px-4 py-3.5 rounded-2xl text-[13px] font-black text-slate-700 border border-slate-100 outline-none focus:ring-4 ring-indigo-50">
+              <option value="">-- Select an event --</option>
+              {events.map(ev => <option key={ev} value={ev}>{ev}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Endpoint URL</label>
+            <input value={form.url} onChange={e => setForm({ ...form, url: e.target.value })} placeholder="https://your-endpoint.com/webhook" className="w-full bg-slate-50 px-4 py-3.5 rounded-2xl text-[12px] font-mono font-bold text-slate-700 border border-slate-100 outline-none focus:ring-4 ring-indigo-50 transition-all" />
+          </div>
+          <div>
+            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 block">HTTP Method</label>
+            <div className="flex gap-2">
+              {['POST', 'PUT', 'PATCH'].map(m => (
+                <button key={m} onClick={() => setForm({ ...form, method: m })} className={`px-4 py-2.5 rounded-2xl text-[11px] font-black transition-all ${form.method === m ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'}`}>{m}</button>
+              ))}
+            </div>
+          </div>
+          <div className="flex gap-3 pt-2">
+            <button onClick={() => { if (form.event && form.url) { onAdd(form); onClose() } }} disabled={!form.event || !form.url}
+              className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest shadow-lg shadow-indigo-100 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-40">Register Webhook</button>
+            <button onClick={onClose} className="px-6 py-4 bg-slate-50 text-slate-400 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-100">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── NEW: CHART INTERACTIVE COMPONENTS ──
+
+const ChartIntelligencePanel = ({ name, explanation, insight, action }) => (
+  <div className="flex flex-col h-full p-6 animate-in slide-in-from-right duration-500 overflow-y-auto">
+    <div className="flex items-center gap-2 mb-6">
+      <div className="w-8 h-8 rounded-xl bg-indigo-50 flex items-center justify-center text-[#6C5CE7]">
+        <Sparkles size={16} />
+      </div>
+      <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest">{name} Insight</h4>
+    </div>
+
+    <div className="space-y-6">
+      <div>
+        <div className="text-[8px] font-black text-[#6C5CE7] uppercase tracking-[0.2em] mb-2 opacity-60">Intelligence Overview</div>
+        <p className="text-[11px] font-bold text-slate-500 leading-relaxed italic">{explanation}</p>
+      </div>
+
+      <div className="p-4 bg-indigo-50/30 rounded-2xl border border-indigo-50/50">
+        <div className="text-[8px] font-black text-[#6C5CE7] uppercase tracking-[0.2em] mb-2">Live CRM Signal</div>
+        <p className="text-[12px] font-black text-slate-800 leading-snug">{insight}</p>
+      </div>
+
+      <div>
+        <div className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Recommended Action</div>
+        <div className="flex items-center gap-3 group/act cursor-pointer">
+          <div className="flex-1 text-[11px] font-black text-slate-500 group-hover/act:text-indigo-600 transition-colors uppercase tracking-tighter line-clamp-2">{action}</div>
+          <div className="w-6 h-6 rounded-lg bg-slate-50 flex items-center justify-center text-slate-300 group-hover/act:bg-indigo-600 group-hover/act:text-white transition-all"><ArrowUpRight size={12} /></div>
+        </div>
+      </div>
+    </div>
+  </div>
+)
+
+// ── FLASHCARD WRAPPER — shared shell for every chart card ──
+const ChartFlashcard = ({ title, subtitle, kpis, badge, badgeColor = 'indigo', gradientFrom = '#4F46E5', gradientTo = '#7C3AED', children, footer }) => (
+  <div className="bg-white rounded-[40px] overflow-hidden border border-slate-100 shadow-lg shadow-slate-100/60 hover:shadow-2xl hover:shadow-indigo-100/30 hover:-translate-y-0.5 transition-all duration-500 group">
+    {/* ── GRADIENT HEADER ── */}
+    <div className="relative px-8 pt-7 pb-5 overflow-hidden" style={{ background: `linear-gradient(135deg, ${gradientFrom} 0%, ${gradientTo} 100%)` }}>
+      <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: 'radial-gradient(circle at 70% 50%, white 1px, transparent 1px)', backgroundSize: '18px 18px' }} />
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex-1">
+          <p className="text-[9px] font-black text-white/50 uppercase tracking-[0.25em] mb-1">{subtitle}</p>
+          <h3 className="text-[17px] font-black text-white leading-tight tracking-tight">{title}</h3>
+        </div>
+        {badge && (
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/15 border border-white/20 backdrop-blur-sm">
+            <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-[9px] font-black text-white uppercase tracking-widest">{badge}</span>
+          </div>
+        )}
+      </div>
+      {/* KPI strip */}
+      {kpis && (
+        <div className="flex items-center gap-6">
+          {kpis.map((k, i) => (
+            <div key={i}>
+              <div className="text-[19px] font-black text-white leading-none">{k.value}</div>
+              <div className="text-[8px] font-black text-white/50 uppercase tracking-widest mt-0.5">{k.label}</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+    {/* ── CHART BODY ── */}
+    <div className="px-8 pt-6 pb-4">
+      {children}
+    </div>
+    {/* ── FOOTER INSIGHT ── */}
+    {footer && (
+      <div className="mx-8 mb-6 px-5 py-3.5 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between">
+        <p className="text-[11px] font-black text-slate-600 leading-snug">{footer.text}</p>
+        <span className={`text-[10px] font-black px-2.5 py-1 rounded-full ${footer.trend === 'up' ? 'bg-emerald-50 text-emerald-600' :
+            footer.trend === 'down' ? 'bg-rose-50 text-rose-600' : 'bg-indigo-50 text-indigo-600'
+          }`}>{footer.label}</span>
+      </div>
+    )}
+  </div>
+)
+
+// ── CHART SUMMARY GRID — reusable detail summary row ──
+const ChartSummaryGrid = ({ stats }) => (
+  <div className="grid grid-cols-2 gap-3 mt-5 pt-5 border-t border-slate-50">
+    {stats.map((s, i) => (
+      <div key={i} className="flex items-start gap-3 p-3.5 rounded-2xl bg-slate-50/70 hover:bg-slate-100/60 transition-colors">
+        <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: s.bg || '#EEF2FF', color: s.color || '#4F46E5' }}>
+          <s.icon size={15} strokeWidth={2.5} />
+        </div>
+        <div className="min-w-0">
+          <div className="text-[15px] font-black text-slate-900 leading-tight tracking-tight">{s.value}</div>
+          <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5 leading-none">{s.label}</div>
+          {s.trend && (
+            <div className={`inline-flex items-center gap-0.5 mt-1 text-[9px] font-black px-1.5 py-0.5 rounded-full ${s.trend === 'up' ? 'bg-emerald-50 text-emerald-600' : s.trend === 'down' ? 'bg-rose-50 text-rose-600' : 'bg-indigo-50 text-indigo-600'
+              }`}>{s.trend === 'up' ? '↑' : s.trend === 'down' ? '↓' : '→'} {s.trendLabel}</div>
+          )}
+        </div>
+      </div>
+    ))}
+  </div>
+)
+
+const LeadsIntelligenceSummary = ({ leads }) => {
+  const stats = [
+    { label: 'Total Intake', value: leads.length, icon: Activity, color: 'indigo' },
+    { label: 'High Priority', value: leads.filter(l => (l.Rating || '').includes('Hot')).length, icon: Flame, color: 'rose' },
+    { label: 'Outreach Pace', value: leads.filter(l => (l.Status || '').includes('Working')).length, icon: TrendingUp, color: 'emerald' },
+    { label: 'Pipe Potential', value: `$${(leads.filter(l => (l.Rating || '').includes('Hot')).length * 15500).toLocaleString()}`, icon: DollarSign, color: 'amber' }
+  ]
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
+      {stats.map((s, i) => (
+        <div key={i} className="premium-card p-6 flex flex-col gap-3 group hover:scale-[1.02] transition-all cursor-default overflow-hidden relative border-none shadow-sm shadow-slate-100 bg-white rounded-[32px]">
+          <div className={`absolute top-0 right-0 w-24 h-24 -mr-8 -mt-8 rounded-full opacity-[0.03] bg-current group-hover:scale-150 transition-transform duration-700`} style={{ color: `var(--${s.color}-500)` }} />
+          <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shadow-sm`} style={{ backgroundColor: s.color === 'indigo' ? '#EEF2FF' : s.color === 'rose' ? '#FFF1F2' : s.color === 'emerald' ? '#ECFDF5' : '#FFFBEB', color: s.color === 'indigo' ? '#4F46E5' : s.color === 'rose' ? '#F43F5E' : s.color === 'emerald' ? '#10B981' : '#F59E0B' }}><s.icon size={20} /></div>
+          <div>
+            <div className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">{s.label}</div>
+            <div className="text-2xl font-black text-slate-900 leading-none">{s.value}</div>
+          </div>
+        </div>
+      ))}
     </div>
   )
 }
@@ -1117,1787 +1018,2649 @@ function LeadSelector({ leads, type, onSelect, onCancel }) {
 // ──────────────────────────────────────────────────────────────
 // MAIN DASHBOARD
 // ──────────────────────────────────────────────────────────────
+
+// ── ADVANCED ANALYTICS COMPONENTS ──
+
+// ── QUOTA ATTAINMENT — Flashcard ──
+const QuotaAttainmentGauge = ({ data }) => {
+  const achievedPercent = data ? Math.floor((data[0].value / (data[0].value + data[1].value)) * 100) : 73
+  const remainPct = 100 - achievedPercent
+  return (
+    <ChartFlashcard
+      title="Quota Attainment"
+      subtitle="Sales Performance"
+      badge="Live Target"
+      gradientFrom="#4F46E5" gradientTo="#7C3AED"
+      kpis={[
+        { value: `${achievedPercent}%`, label: 'Achieved' },
+        { value: `${remainPct}%`, label: 'Remaining' },
+        { value: 'On Track', label: 'Status' },
+      ]}
+      footer={{ text: 'Quota target at pace for Q close. Review pipeline velocity.', label: '↑ Healthy', trend: 'up' }}
+    >
+      <div className="h-[220px] w-full relative flex items-center justify-center">
+        <ResponsiveContainer width="100%" height="100%">
+          <RePieChart>
+            <defs>
+              <linearGradient id="gaugeGrad" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stopColor="#4F46E5" />
+                <stop offset="100%" stopColor="#818CF8" />
+              </linearGradient>
+            </defs>
+            <Pie
+              data={data || GAUGE_DATA}
+              cx="50%" cy="80%"
+              startAngle={180} endAngle={0}
+              innerRadius={75} outerRadius={110}
+              paddingAngle={0} dataKey="value" stroke="none"
+            >
+              <Cell fill="url(#gaugeGrad)" />
+              <Cell fill="#F1F5F9" />
+            </Pie>
+          </RePieChart>
+        </ResponsiveContainer>
+        <div className="absolute top-[64%] left-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
+          <div className="text-5xl font-black text-slate-900 leading-none">{achievedPercent}%</div>
+          <div className="text-[9px] font-black text-emerald-600 uppercase tracking-widest mt-1.5 bg-emerald-50 px-3 py-1 rounded-full">✓ On Track</div>
+        </div>
+      </div>
+      {/* Progress bar breakdown */}
+      <div className="space-y-2.5 mt-1">
+        <div className="flex items-center justify-between text-[10px] font-black text-slate-500">
+          <span>Quota Progress</span><span className="text-indigo-600">{achievedPercent}%</span>
+        </div>
+        <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+          <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${achievedPercent}%`, background: 'linear-gradient(90deg,#4F46E5,#818CF8)' }} />
+        </div>
+      </div>
+      <ChartSummaryGrid stats={[
+        { icon: TrendingUp, value: `${achievedPercent}%`, label: 'Current Attainment', bg: '#EEF2FF', color: '#4F46E5', trend: 'up', trendLabel: `+${achievedPercent - 65}% vs last Q` },
+        { icon: DollarSign, value: '$732k', label: 'Revenue Booked', bg: '#ECFDF5', color: '#10B981', trend: 'up', trendLabel: 'Above Pace' },
+        { icon: Target, value: '$1.0M', label: 'Annual Target', bg: '#FFF7ED', color: '#F59E0B', trend: 'neutral', trendLabel: 'Q2 Target' },
+        { icon: Clock, value: `${remainPct}%`, label: 'Gap to Close', bg: '#FFF1F2', color: '#F43F5E', trend: remainPct < 30 ? 'up' : 'down', trendLabel: remainPct < 30 ? 'Low gap' : 'Needs focus' },
+      ]} />
+    </ChartFlashcard>
+  )
+}
+
+// ── LEAD ACTIVITY HEATMAP — Flashcard ──
+const LeadActivityHeatMap = ({ data }) => {
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+  const totalEvents = (data || HEATMAP_DATA).reduce((s, d) => s + d.value, 0)
+  const peakHour = (data || HEATMAP_DATA).reduce((best, d) => d.value > best.value ? d : best, { value: 0 })
+  const avgPerDay = Math.round(totalEvents / 7)
+  const peakDay = days[peakHour.day] || 'Wed'
+  return (
+    <ChartFlashcard
+      title="Lead Activity Heatmap"
+      subtitle="Engagement Intelligence"
+      badge="7-Day Analysis"
+      gradientFrom="#7C3AED" gradientTo="#0EA5E9"
+      kpis={[
+        { value: totalEvents, label: 'Total Signals' },
+        { value: `${peakHour.hour}:00`, label: 'Peak Hour' },
+        { value: '7 Days', label: 'Window' },
+      ]}
+      footer={{ text: 'Highest engagement detected in mid-morning business hours across all leads.', label: 'Schedule Outreach', trend: 'neutral' }}
+    >
+      <div className="flex flex-col gap-3">
+        <div className="grid grid-cols-[32px_1fr] gap-3 items-start">
+          <div className="flex flex-col justify-between pt-0.5" style={{ gap: '5px' }}>
+            {days.map(d => <span key={d} className="text-[8px] font-black text-slate-300 uppercase leading-none" style={{ height: '14px', display: 'flex', alignItems: 'center' }}>{d}</span>)}
+          </div>
+          <div className="grid gap-[3px]" style={{ gridTemplateColumns: 'repeat(24, 1fr)' }}>
+            {(data || HEATMAP_DATA).map((d, i) => (
+              <div
+                key={i}
+                className="rounded-[3px] transition-all hover:scale-150 hover:z-10 cursor-pointer"
+                style={{ aspectRatio: '1', backgroundColor: `rgba(79,70,229,${0.07 + (d.value / 100) * 0.93})` }}
+                title={`${days[d.day]} ${d.hour}:00 — ${d.value} events`}
+              />
+            ))}
+          </div>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-[8px] font-black text-slate-300 uppercase">00:00</span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[8px] font-black text-slate-300 uppercase">Low</span>
+            {[0.1, 0.3, 0.5, 0.7, 0.9].map(o => <div key={o} className="w-3 h-2 rounded-sm" style={{ background: `rgba(79,70,229,${o})` }} />)}
+            <span className="text-[8px] font-black text-slate-300 uppercase">High</span>
+          </div>
+          <span className="text-[8px] font-black text-slate-300 uppercase">23:00</span>
+        </div>
+      </div>
+      <ChartSummaryGrid stats={[
+        { icon: Activity, value: totalEvents, label: 'Total Signals', bg: '#F3F4FF', color: '#6366F1', trend: 'up', trendLabel: '+12% vs last week' },
+        { icon: Clock, value: `${peakHour.hour}:00`, label: 'Peak Activity Hour', bg: '#F0FDF4', color: '#10B981', trend: 'neutral', trendLabel: 'Mid-morning slot' },
+        { icon: TrendingUp, value: avgPerDay, label: 'Avg Events / Day', bg: '#FFF7ED', color: '#F59E0B', trend: 'up', trendLabel: 'Consistent pace' },
+        { icon: Users, value: peakDay, label: 'Most Active Day', bg: '#EEF2FF', color: '#4F46E5', trend: 'neutral', trendLabel: 'Best outreach day' },
+      ]} />
+    </ChartFlashcard>
+  )
+}
+
+// ── DEAL SIZE BUBBLE CHART — Flashcard ──
+const DealSizeBubbleChart = ({ data }) => {
+  const d = data || BUBBLE_DATA
+  const hotCount = d.filter(x => x.status === 'Hot').length
+  const warmCount = d.filter(x => x.status === 'Warm').length
+  const coldCount = d.filter(x => x.status === 'Cold').length
+  const totalRevPotential = d.reduce((s, x) => s + x.y, 0)
+  const avgScore = Math.round(d.reduce((s, x) => s + x.x, 0) / d.length)
+  return (
+    <ChartFlashcard
+      title="Deal Size Intelligence"
+      subtitle="Revenue vs Lead Score"
+      badge="Opportunity Map"
+      gradientFrom="#0F172A" gradientTo="#1E293B"
+      kpis={[
+        { value: `${hotCount}`, label: 'Hot Deals' },
+        { value: `$${(totalRevPotential / 1000).toFixed(0)}k`, label: 'Pipeline' },
+        { value: `${d.length}`, label: 'Tracked' },
+      ]}
+      footer={{ text: 'High-score leads with $35k+ potential identified in top-right quadrant.', label: '↑ Focus Zone', trend: 'up' }}
+    >
+      <div className="h-[240px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <ScatterChart margin={{ top: 10, right: 10, bottom: 10, left: -10 }}>
+            <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#F1F5F9" />
+            <XAxis type="number" dataKey="x" name="Lead Score" unit="%" axisLine={false} tickLine={false}
+              tick={{ fontSize: 10, fontWeight: 900, fill: '#CBD5E1' }} tickCount={5} />
+            <YAxis type="number" dataKey="y" name="Revenue" axisLine={false} tickLine={false}
+              tick={{ fontSize: 10, fontWeight: 900, fill: '#CBD5E1' }} tickFormatter={v => `$${v / 1000}k`} />
+            <ZAxis type="number" dataKey="z" range={[40, 320]} />
+            <Tooltip cursor={false} contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 20px 40px -10px rgba(0,0,0,0.15)', padding: '12px 16px', fontWeight: 900, fontSize: '11px', background: '#fff' }}
+              formatter={(v, name) => name === 'Revenue' ? [`$${v.toLocaleString()}`, name] : [v, name]} />
+            <Scatter name="Hot" data={d.filter(x => x.status === 'Hot')} fill="#4F46E5" fillOpacity={0.85} />
+            <Scatter name="Warm" data={d.filter(x => x.status === 'Warm')} fill="#818CF8" fillOpacity={0.7} />
+            <Scatter name="Cold" data={d.filter(x => x.status === 'Cold')} fill="#CBD5E1" fillOpacity={0.6} />
+          </ScatterChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="flex items-center gap-4 mt-2">
+        {[{ c: '#4F46E5', l: 'Hot' }, { c: '#818CF8', l: 'Warm' }, { c: '#CBD5E1', l: 'Cold' }].map(s => (
+          <div key={s.l} className="flex items-center gap-1.5">
+            <div className="w-2.5 h-2.5 rounded-full" style={{ background: s.c }} />
+            <span className="text-[10px] font-black text-slate-400 uppercase">{s.l}</span>
+          </div>
+        ))}
+      </div>
+    </ChartFlashcard>
+  )
+}
+
+// ── MONTHLY WATERFALL CHART — Flashcard ──
+const MonthlyWaterfallChart = ({ data }) => {
+  const d = data || WATERFALL_DATA
+  const totalGain = d.reduce((s, r) => s + (r.gain || 0), 0)
+  const totalLoss = d.reduce((s, r) => s + Math.abs(r.loss || 0), 0)
+  const netMRR = d[d.length - 1].total
+  const bestMonth = d.reduce((best, r) => r.gain > best.gain ? r : best, d[0])
+  const netGrowthPct = Math.round(((netMRR - d[0].total) / d[0].total) * 100)
+  return (
+    <ChartFlashcard
+      title="Monthly Growth Stream"
+      subtitle="MRR Gain / Loss Analysis"
+      badge="Waterfall View"
+      gradientFrom="#10B981" gradientTo="#0F766E"
+      kpis={[
+        { value: `$${(totalGain / 1000).toFixed(0)}k`, label: 'Total Gains' },
+        { value: `$${(totalLoss / 1000).toFixed(0)}k`, label: 'Total Losses' },
+        { value: `$${(netMRR / 1000).toFixed(0)}k`, label: 'Net MRR' },
+      ]}
+      footer={{ text: 'Cumulative MRR growing consistently. Feb recorded highest single-month loss event.', label: '+114% Net', trend: 'up' }}
+    >
+      <div className="h-[230px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <ComposedChart data={d} margin={{ top: 10, right: 10, bottom: 5, left: -10 }} barGap={2}>
+            <defs>
+              <linearGradient id="gainGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#10B981" stopOpacity={1} />
+                <stop offset="100%" stopColor="#10B981" stopOpacity={0.6} />
+              </linearGradient>
+              <linearGradient id="lossGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#F43F5E" stopOpacity={0.7} />
+                <stop offset="100%" stopColor="#F43F5E" stopOpacity={1} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#F1F5F9" />
+            <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 900, fill: '#94A3B8' }} />
+            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 900, fill: '#94A3B8' }} tickFormatter={v => `$${v / 1000}k`} />
+            <Tooltip contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 20px 40px -10px rgba(0,0,0,0.12)', padding: '12px 16px', fontWeight: 900, fontSize: '11px' }}
+              formatter={(v, name) => [`$${Math.abs(v).toLocaleString()}`, name.charAt(0).toUpperCase() + name.slice(1)]} />
+            <Bar dataKey="gain" fill="url(#gainGrad)" radius={[6, 6, 0, 0]} barSize={20} name="gain" />
+            <Bar dataKey="loss" fill="url(#lossGrad)" radius={[0, 0, 6, 6]} barSize={20} name="loss" />
+            <Line type="monotone" dataKey="total" stroke="#4F46E5" strokeWidth={2.5}
+              dot={{ r: 4, fill: '#fff', stroke: '#4F46E5', strokeWidth: 2.5 }}
+              activeDot={{ r: 6, fill: '#4F46E5', stroke: '#fff', strokeWidth: 3 }} />
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
+      <ChartSummaryGrid stats={[
+        { icon: TrendingUp, value: `$${(totalGain / 1000).toFixed(0)}k`, label: 'Total Revenue Gained', bg: '#ECFDF5', color: '#10B981', trend: 'up', trendLabel: `${d.length}-month sum` },
+        { icon: TrendingDown, value: `$${(totalLoss / 1000).toFixed(0)}k`, label: 'Total Revenue Lost', bg: '#FFF1F2', color: '#F43F5E', trend: 'down', trendLabel: 'Churn events' },
+        { icon: DollarSign, value: `$${(netMRR / 1000).toFixed(0)}k`, label: 'Ending MRR', bg: '#EEF2FF', color: '#4F46E5', trend: 'up', trendLabel: `+${netGrowthPct}% growth` },
+        { icon: CheckCircle, value: bestMonth.month, label: 'Best Growth Month', bg: '#FFF7ED', color: '#F59E0B', trend: 'up', trendLabel: `$${(bestMonth.gain / 1000).toFixed(0)}k gained` },
+      ]} />
+    </ChartFlashcard>
+  )
+}
+
+// ── LEAD SCORE SCATTER PLOT — Flashcard ──
+const LeadScoreScatterPlot = () => {
+  const avgScore = Math.round(SCATTER_PLOT_DATA.reduce((s, d) => s + d.score, 0) / SCATTER_PLOT_DATA.length)
+  const avgRevenue = Math.round(SCATTER_PLOT_DATA.reduce((s, d) => s + d.revenue, 0) / SCATTER_PLOT_DATA.length)
+  const highScoreLeads = SCATTER_PLOT_DATA.filter(d => d.score >= 75).length
+  const maxRevLead = SCATTER_PLOT_DATA.reduce((best, d) => d.revenue > best.revenue ? d : best, SCATTER_PLOT_DATA[0])
+  return (
+    <ChartFlashcard
+      title="Lead Score Distribution"
+      subtitle="Score-to-Revenue Correlation"
+      badge="30 Leads Tracked"
+      gradientFrom="#F59E0B" gradientTo="#D97706"
+      kpis={[
+        { value: avgScore, label: 'Avg Score' },
+        { value: `$${(avgRevenue / 1000).toFixed(1)}k`, label: 'Avg Revenue' },
+        { value: '30', label: 'Data Points' },
+      ]}
+      footer={{ text: 'High-score leads (80+) consistently map to >$35k revenue potential. Prioritize accordingly.', label: 'Positive Corr.', trend: 'up' }}
+    >
+      <div className="h-[230px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <ScatterChart margin={{ top: 10, right: 10, bottom: 10, left: -10 }}>
+            <defs>
+              <radialGradient id="dotGrad" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor="#818CF8" />
+                <stop offset="100%" stopColor="#4F46E5" />
+              </radialGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#F1F5F9" />
+            <XAxis type="number" dataKey="score" name="Score" axisLine={false} tickLine={false}
+              tick={{ fontSize: 10, fontWeight: 900, fill: '#CBD5E1' }} domain={[0, 100]}
+              ticks={[0, 25, 50, 75, 100]} />
+            <YAxis type="number" dataKey="revenue" name="Revenue" axisLine={false} tickLine={false}
+              tick={{ fontSize: 10, fontWeight: 900, fill: '#CBD5E1' }} tickFormatter={v => `$${v / 1000}k`} />
+            <Tooltip cursor={false}
+              contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 20px 40px -10px rgba(0,0,0,0.12)', padding: '12px 16px', fontWeight: 900, fontSize: '11px' }}
+              formatter={(v, name) => name === 'Revenue' ? [`$${v.toLocaleString()}`, name] : [v, name]} />
+            <Scatter name="Leads" data={SCATTER_PLOT_DATA} fill="url(#dotGrad)" fillOpacity={0.8} />
+          </ScatterChart>
+        </ResponsiveContainer>
+      </div>
+      <ChartSummaryGrid stats={[
+        { icon: TrendingUp, value: avgScore, label: 'Average Lead Score', bg: '#FFF7ED', color: '#F59E0B', trend: avgScore > 50 ? 'up' : 'neutral', trendLabel: 'Out of 100' },
+        { icon: DollarSign, value: `$${(avgRevenue / 1000).toFixed(1)}k`, label: 'Avg Revenue / Lead', bg: '#EEF2FF', color: '#4F46E5', trend: 'up', trendLabel: 'Mean value' },
+        { icon: Sparkles, value: highScoreLeads, label: 'High-Score Leads (75+)', bg: '#ECFDF5', color: '#10B981', trend: 'up', trendLabel: `${Math.round(highScoreLeads / 30 * 100)}% of dataset` },
+        { icon: ArrowUpRight, value: `$${(maxRevLead.revenue / 1000).toFixed(1)}k`, label: 'Peak Revenue Lead', bg: '#FFF1F2', color: '#F43F5E', trend: 'up', trendLabel: `Score: ${maxRevLead.score}` },
+      ]} />
+    </ChartFlashcard>
+  )
+}
+
+// ── CHAT SUGGESTIONS DATA ──
+const SUGGESTIONS_BANK = {
+  create: ['create a new lead', 'create a new opportunity', 'create a new account', 'create a new contact', 'create a new task', 'create a new group', 'create a new event'],
+  show: ['show all leads', 'show hot leads', 'show recent opportunities', 'show active accounts', 'show pending tasks', 'show upcoming events'],
+  update: ['update lead status', 'update opportunity stage', 'update account details', 'update contact info', 'update task priority'],
+  delete: ['delete a lead', 'delete an opportunity', 'delete a contact', 'delete a task'],
+  how: ['how many leads do I have', 'how many hot leads', 'how is my pipeline value', 'how many deals won this month', 'how many tasks pending'],
+  what: ['what is my MRR', 'what is conversion rate', 'what are top leads', 'what is pipeline value', 'what campaigns are active'],
+}
+
+const CONTEXT_SUGGESTIONS = {
+  'Overview': ['show pipeline summary', 'how many active leads', 'what is today\'s revenue'],
+  'Leads': ['create a new lead', 'show hot leads', 'update lead status'],
+  'Opportunities': ['create a new opportunity', 'show closed won deals', 'update opportunity stage'],
+}
+
 export default function Dashboard() {
   const [activeNav, setActiveNav] = useState('Overview')
-  const [dateRange, setDateRange] = useState('Last 30 Days')
-  const [showDateDD, setShowDateDD] = useState(false)
-  const [messages, setMessages] = useState([
-    { role: 'ai', text: "👋 Hi! I'm your analytics AI. Ask me about revenue, churn, campaigns, or customers!" }
-  ])
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    try { return localStorage.getItem('sidebarCollapsed') === 'true' } catch { return false }
+  })
+  const toggleSidebar = () => setSidebarCollapsed(v => {
+    const next = !v
+    try { localStorage.setItem('sidebarCollapsed', String(next)) } catch { }
+    return next
+  })
+  const [messages, setMessages] = useState([{ role: 'ai', text: "👋 Hi! I'm your analytics AI. Ask me about revenue, churn, campaigns, or customers!" }])
   const [inputVal, setInputVal] = useState('')
   const [typing, setTyping] = useState(false)
-  const [sortCol, setSortCol] = useState('mrr')
-  const [sortDir, setSortDir] = useState('desc')
-  const [page, setPage] = useState(1)
-  const [search, setSearch] = useState('')
-  const [showNotif, setShowNotif] = useState(false)
-  const [showModal, setShowModal] = useState(false)
-  const [sfLeads, setSfLeads] = useState(null)
+  const [isChatOpen, setIsChatOpen] = useState(false)
+  const [isChatMinimized, setIsChatMinimized] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
+  const [chatLanguage, setChatLanguage] = useState('en')
+  const [ollamaConnected, setOllamaConnected] = useState(false)
+  const [isStreaming, setIsStreaming] = useState(false)
+  const [activeModel, setActiveModel] = useState('llama3')
+  const abortControllerRef = useRef(null)
+
+  const checkOllamaHealth = useCallback(async () => {
+    try {
+      const res = await fetch("http://localhost:11434/api/tags")
+      if (res.ok) {
+        const data = await res.json()
+        const hasLlama = data.models?.some(m => m.name.includes('llama3'))
+        setOllamaConnected(true)
+      } else {
+        setOllamaConnected(false)
+      }
+    } catch (e) {
+      setOllamaConnected(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    checkOllamaHealth()
+    const interval = setInterval(checkOllamaHealth, 10000)
+    return () => clearInterval(interval)
+  }, [checkOllamaHealth])
+
+  // Chat Sessions State Data
+  const [chatSessions, setChatSessions] = useState(() => {
+    try {
+      const stored = localStorage.getItem('pulsar_chat_sessions')
+      if (stored) return JSON.parse(stored)
+    } catch (e) {}
+    return []
+  })
+  
+  const [activeSessionId, setActiveSessionId] = useState(() => {
+    try {
+      const stored = localStorage.getItem('pulsar_chat_sessions')
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        if (parsed.length > 0) return parsed[0].id
+      }
+    } catch (e) {}
+    return null
+  })
+
+  const [editingSessionId, setEditingSessionId] = useState(null)
+  const [editingTitle, setEditingTitle] = useState("")
+
+  // Sync activeSessionId with its messages
+  useEffect(() => {
+    if (activeSessionId) {
+      const session = chatSessions.find(s => s.id === activeSessionId)
+      if (session && session.messages) {
+        setMessages(session.messages)
+      } else {
+        setMessages([{ role: 'ai', text: "👋 Hi! I'm your analytics AI. Ask me about revenue, churn, campaigns, or customers!" }])
+      }
+    } else {
+      setMessages([])
+    }
+  }, [activeSessionId]) // Only depend on ID so we don't trigger recursively
+
+  // Persist sessions and sync live messages into active session
+  useEffect(() => {
+    if (!activeSessionId) return
+    setChatSessions(prev => {
+      const exists = prev.find(s => s.id === activeSessionId)
+      if (!exists) return prev
+      // Only update if array is different length or last message is different to avoid unnecessary saves
+      if (JSON.stringify(exists.messages) === JSON.stringify(messages)) return prev
+      return prev.map(s => s.id === activeSessionId ? { ...s, messages, updatedAt: Date.now() } : s)
+    })
+  }, [messages])
+
+  useEffect(() => {
+    try {
+      if (chatSessions.length > 0) {
+        localStorage.setItem('pulsar_chat_sessions', JSON.stringify(chatSessions))
+      } else {
+        localStorage.removeItem('pulsar_chat_sessions')
+      }
+    } catch (e) {}
+  }, [chatSessions])
+
+  const createNewChat = () => {
+    const newId = Date.now()
+    setChatSessions(prev => [
+      { id: newId, name: 'New Conversation', messages: [], date: new Date().toISOString(), updatedAt: Date.now() },
+      ...prev
+    ])
+    setActiveSessionId(newId)
+  }
+
+  const deleteSession = (e, id) => {
+    e.stopPropagation()
+    setChatSessions(prev => {
+      const next = prev.filter(s => s.id !== id)
+      if (activeSessionId === id) {
+        setActiveSessionId(next.length > 0 ? next[0].id : null)
+      }
+      return next
+    })
+    showToast('Conversation deleted', 'info')
+  }
+
+  const groupSessionsByTime = (sessions) => {
+    const groups = { 'Today': [], 'Yesterday': [], 'Last 7 Days': [], 'Last 30 Days': [], 'Older': [] }
+    const now = new Date()
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+    const yesterday = today - 86400000
+    const last7 = today - 86400000 * 7
+    const last30 = today - 86400000 * 30
+
+    sessions.forEach(s => {
+      const t = new Date(s.date || s.createdAt || s.updatedAt || Date.now()).getTime()
+      if (t >= today) groups['Today'].push(s)
+      else if (t >= yesterday) groups['Yesterday'].push(s)
+      else if (t >= last7) groups['Last 7 Days'].push(s)
+      else if (t >= last30) groups['Last 30 Days'].push(s)
+      else groups['Older'].push(s)
+    })
+    return groups
+  }
+
+  // AI Chat Suggestions State
+  const [suggestions, setSuggestions] = useState([])
+  const [selectedIndex, setSelectedIndex] = useState(-1)
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [recentCommands, setRecentCommands] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('ai_recent_commands') || '[]') } catch { return [] }
+  })
+
+  useEffect(() => {
+    localStorage.setItem('ai_recent_commands', JSON.stringify(recentCommands))
+  }, [recentCommands])
+
+  const chatInputRef = useRef(null)
+
+  // / shortcut
+  useEffect(() => {
+    const handleGlobalKey = (e) => {
+      if (e.key === '/' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+        e.preventDefault()
+        setIsChatOpen(true)
+        setIsChatMinimized(false)
+        setTimeout(() => chatInputRef.current?.focus(), 100)
+      }
+    }
+    window.addEventListener('keydown', handleGlobalKey)
+    return () => window.removeEventListener('keydown', handleGlobalKey)
+  }, [])
+
+
+  // Filtering Logic
+  useEffect(() => {
+    if (!inputVal.trim()) {
+      setSuggestions(CONTEXT_SUGGESTIONS[activeNav] || [])
+      setSelectedIndex(-1)
+      return
+    }
+
+    const val = inputVal.toLowerCase()
+    let matches = []
+
+    // Check categories
+    Object.keys(SUGGESTIONS_BANK).forEach(cat => {
+      if (val.startsWith(cat) || cat.startsWith(val)) {
+        matches = [...matches, ...SUGGESTIONS_BANK[cat].filter(s => s.toLowerCase().includes(val))]
+      }
+    })
+
+    // General matching if no prefix matched
+    if (matches.length === 0) {
+      Object.values(SUGGESTIONS_BANK).flat().forEach(s => {
+        if (s.toLowerCase().includes(val)) matches.push(s)
+      })
+    }
+
+    setSuggestions([...new Set(matches)].slice(0, 5))
+    setSelectedIndex(0)
+  }, [inputVal, activeNav])
+
+  const highlightMatch = (text, query) => {
+    if (!query) return text
+    const parts = text.split(new RegExp(`(${query})`, 'gi'))
+    return parts.map((p, i) =>
+      p.toLowerCase() === query.toLowerCase()
+        ? <strong key={i} className="text-indigo-600 font-black">{p}</strong>
+        : p
+    )
+  }
+
+  const getSuggestionIcon = (s) => {
+    const l = s.toLowerCase()
+    if (l.includes('create') || l.includes('add') || l.includes('உருவாக்கு') || l.includes('बनाएं')) return <UserPlus size={14} className="text-emerald-500" />
+    if (l.includes('show') || l.includes('list') || l.includes('காட்டு') || l.includes('दिखाएं')) return <Eye size={14} className="text-indigo-500" />
+    if (l.includes('update') || l.includes('edit') || l.includes('மாற்று') || l.includes('बदलें')) return <Edit3 size={14} className="text-amber-500" />
+    if (l.includes('delete') || l.includes('remove') || l.includes('நீக்கு') || l.includes('हटाएं')) return <Trash2 size={14} className="text-rose-500" />
+    if (l.includes('how') || l.includes('what') || l.includes('ஏன்') || l.includes('क्या')) return <Bot size={14} className="text-purple-500" />
+    return <Clock size={14} className="text-slate-400" />
+  }
+
+
+
+  const [sidebarWidth, setSidebarWidth] = useState(480)
+  const [isResizing, setIsResizing] = useState(false)
+  const [opMenuOpen, setOpMenuOpen] = useState(false)
+  const [activeForm, setActiveForm] = useState(null)
+  const [connected, setConnected] = useState(false)
+  const [sfLeads, setSfLeads] = useState([])
   const [sfOpportunities, setSfOpportunities] = useState([])
   const [sfAccounts, setSfAccounts] = useState([])
   const [sfContacts, setSfContacts] = useState([])
   const [sfTasks, setSfTasks] = useState([])
   const [sfEvents, setSfEvents] = useState([])
   const [sfGroups, setSfGroups] = useState([])
-  const [oppsLoading, setOppsLoading] = useState(false)
-  const [accLoading, setAccLoading] = useState(false)
-  const [contLoading, setContLoading] = useState(false)
-  const [taskLoading, setTaskLoading] = useState(false)
-  const [eventLoading, setEventLoading] = useState(false)
-  const [groupLoading, setGroupLoading] = useState(false)
-  const [connected, setConnected] = useState(false)
-  const [isSyncing, setIsSyncing] = useState(false)
-  const [lastSync, setLastSync] = useState(null)
-  const [selectedKPI, setSelectedKPI] = useState('Pipeline Value')
-  const [showKPIModal, setShowKPIModal] = useState(false)
-  const [asideWidth, setAsideWidth] = useState(380)
-  const [isResizing, setIsResizing] = useState(false)
-  const [showQuickActions, setShowQuickActions] = useState(false)
   const [sfReports, setSfReports] = useState([])
-  const [reportsLoading, setReportsLoading] = useState(false)
-  const [settingsTab, setSettingsTab] = useState('Profile')
-  const [syncIntensity, setSyncIntensity] = useState(30)
-  const [darkMode, setDarkMode] = useState(false)
-  const chatRef = useRef(null)
-  const kpiSectionRef = useRef(null)
+  const [showCreateMenu, setShowCreateMenu] = useState(null)
+  const [sfCampaigns, setSfCampaigns] = useState([])
+  const [sfFiles, setSfFiles] = useState([])
+  const [showModal, setShowModal] = useState(false)
+  const [lastSync, setLastSync] = useState(null)
+  const [search, setSearch] = useState('')
 
-  // Sidebar Resizing Logic
-  useEffect(() => {
-    const handleMouseMove = (e) => {
-      if (!isResizing) return
-      const newWidth = window.innerWidth - e.clientX
-      if (newWidth > 320 && newWidth < 800) {
-        setAsideWidth(newWidth)
-      }
-    }
-    const handleMouseUp = () => setIsResizing(false)
-    if (isResizing) {
-      window.addEventListener('mousemove', handleMouseMove)
-      window.addEventListener('mouseup', handleMouseUp)
-    }
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove)
-      window.removeEventListener('mouseup', handleMouseUp)
-    }
-  }, [isResizing])
+  // ── ACTION MENU & MODAL STATE ──
+  const [menuData, setMenuData] = useState(null) // { x, y, record, type, fields }
+  const [editModal, setEditModal] = useState(null) // { record, type, fields }
 
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') {
-        setShowKPIModal(false)
-        setShowQuickActions(false)
-      }
-    }
-    const handleClickOutside = (e) => {
-      if (showQuickActions && !e.target.closest('.quick-action-trigger')) {
-        setShowQuickActions(false)
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    window.addEventListener('mousedown', handleClickOutside)
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown)
-      window.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [showQuickActions])
+  // ── INTEGRATIONS STATE ──
+  const [showConnectAppModal, setShowConnectAppModal] = useState(false)
+  const [showAddWebhookModal, setShowAddWebhookModal] = useState(false)
+  const [appStatuses, setAppStatuses] = useState({
+    'Salesforce CRM': 'Connected', 'Slack': 'Connected', 'Google Analytics': 'Connected',
+    'HubSpot': 'Connected', 'Zapier': 'Inactive', 'Stripe': 'Pending'
+  })
+  const [webhooks, setWebhooks] = useState([
+    { id: 1, event: 'lead.created', url: 'https://hooks.zapier.com/leads/new', method: 'POST', calls: 142, success: 99.3 },
+    { id: 2, event: 'opportunity.won', url: 'https://api.slack.com/webhooks/deals', method: 'POST', calls: 28, success: 100 },
+    { id: 3, event: 'contact.updated', url: 'https://api.hubspot.com/crm/sync', method: 'PUT', calls: 317, success: 97.8 },
+    { id: 4, event: 'task.completed', url: 'https://hooks.internal.co/tasks', method: 'POST', calls: 94, success: 100 },
+  ])
+  const [apiTokens, setApiTokens] = useState([
+    { id: 1, name: 'Production API Key', key: 'pls_live_••••••••••••••••••••••••••••••••', fullKey: 'pls_live_4f46e5a3b8c2d1e9f7a6b5c4d3e2f1a0', scope: 'Full Access', expires: 'Dec 31, 2026', active: true, revealed: false },
+    { id: 2, name: 'Analytics Read Key', key: 'pls_anl_••••••••••••••••••••••••••••••••', fullKey: 'pls_anl_7c3aed818cf84f46e5a3b8c2d1e9f7a6', scope: 'Read Only', expires: 'Jun 15, 2026', active: true, revealed: false },
+  ])
 
-  const fetchLiveLeads = (isSilent = true) => {
-    return fetch('http://localhost:3001/api/leads')
-      .then(res => res.json())
-      .then(data => {
-        if (data.success && data.leads) {
-          setSfLeads(data.leads)
-          setConnected(true)
-          setLastSync(new Date().toLocaleTimeString())
-          setShowModal(false)
-          return data.leads
-        } else if (!isSilent) {
-          alert('Failed to load leads: ' + data.error)
-        }
-        return null
-      })
-      .catch(err => {
-        console.error(err)
-        if (!isSilent) alert('Could not reach backend proxy server.')
-        return null
-      })
-  }
-
-  const fetchReports = () => {
-    setReportsLoading(true)
-    fetch('http://localhost:3001/api/reports')
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          setSfReports(data.reports)
-        }
-        setReportsLoading(false)
-      })
-      .catch(() => setReportsLoading(false))
-  }
-
-  const fetchOpportunities = () => {
-    setOppsLoading(true)
-    fetch('http://localhost:3001/api/opportunities')
-      .then(res => res.json())
-      .then(data => { if (data.success) setSfOpportunities(data.opportunities); setOppsLoading(false) })
-      .catch(() => setOppsLoading(false))
-  }
-
-  const fetchAccounts = () => {
-    setAccLoading(true)
-    fetch('http://localhost:3001/api/accounts')
-      .then(res => res.json())
-      .then(data => { if (data.success) setSfAccounts(data.accounts); setAccLoading(false) })
-      .catch(() => setAccLoading(false))
-  }
-
-  const fetchContacts = () => {
-    setContLoading(true)
-    fetch('http://localhost:3001/api/contacts')
-      .then(res => res.json())
-      .then(data => { if (data.success) setSfContacts(data.contacts); setContLoading(false) })
-      .catch(() => setContLoading(false))
-  }
-
-  const fetchTasks = () => {
-    setTaskLoading(true)
-    fetch('http://localhost:3001/api/tasks')
-      .then(res => res.json())
-      .then(data => { if (data.success) setSfTasks(data.tasks); setTaskLoading(false) })
-      .catch(() => setTaskLoading(false))
-  }
-
-  const fetchEvents = () => {
-    setEventLoading(true)
-    fetch('http://localhost:3001/api/events')
-      .then(res => res.json())
-      .then(data => { if (data.success) setSfEvents(data.events); setEventLoading(false) })
-      .catch(() => setEventLoading(false))
-  }
-
-  const fetchGroups = () => {
-    setGroupLoading(true)
-    fetch('http://localhost:3001/api/groups')
-      .then(res => res.json())
-      .then(data => { if (data.success) setSfGroups(data.groups); setGroupLoading(false) })
-      .catch(() => setGroupLoading(false))
-  }
-
-  const refreshAllSFData = (isSilent = true) => {
-    setIsSyncing(true)
-    const p = [
-      fetchLiveLeads(isSilent),
-      fetchOpportunities(),
-      fetchAccounts(),
-      fetchContacts(),
-      fetchTasks(),
-      fetchEvents(),
-      fetchGroups()
-    ]
-    if (activeNav === 'Reports') p.push(fetchReports())
-
-    Promise.allSettled(p).then(() => {
-      setIsSyncing(false)
-    })
-  }
-
-  // Live Heartbeat Sync (Dynamic Interval)
-  useEffect(() => {
-    if (connected) {
-      const interval = setInterval(() => {
-        refreshAllSFData(true)
-      }, syncIntensity * 1000)
-      return () => clearInterval(interval)
-    }
-  }, [connected, syncIntensity])
+  // ── SETTINGS STATE ──
+  const [profile, setProfile] = useState({ name: 'Divya Dharshini', role: 'Workspace Owner', email: 'divya@salesforce.org', phone: '+91 98765 43210', org: 'Pulsar AI Workspace', region: 'Asia Pacific (IN)' })
+  const [profileDirty, setProfileDirty] = useState(false)
+  const [savedProfile, setSavedProfile] = useState(null)
+  const [notifPrefs, setNotifPrefs] = useState([
+    { title: 'New Lead Assigned', desc: 'Triggered when a new lead is routed to your workspace', email: true, push: true, slack: false },
+    { title: 'Deal Stage Change', desc: 'Notify when an opportunity moves to a new stage', email: true, push: false, slack: true },
+    { title: 'Quota Alert', desc: 'Weekly digest of quota attainment vs target', email: true, push: false, slack: true },
+    { title: 'CRM Sync Failure', desc: 'Immediate alert if Salesforce sync encounters an error', email: true, push: true, slack: true },
+    { title: 'New Contact Added', desc: 'Summary when contacts are bulk imported or created', email: false, push: false, slack: false },
+    { title: 'Campaign Performance', desc: 'Daily marketing campaign performance digest', email: true, push: false, slack: false },
+  ])
+  const [syncConfig, setSyncConfig] = useState({ frequency: 'Every 15 min', retention: '90 Days', timezone: 'Asia/Kolkata' })
+  const [securitySettings, setSecuritySettings] = useState([
+    { title: 'Two-Factor Authentication', desc: 'Require a verification code on every login', enabled: true, badge: 'Recommended' },
+    { title: 'OAuth Token Auto-Refresh', desc: 'Automatically renew Salesforce session tokens silently', enabled: true, badge: null },
+    { title: 'IP Allowlist Enforcement', desc: 'Restrict access to specific IP ranges only', enabled: false, badge: 'Enterprise' },
+    { title: 'Audit Log Export', desc: 'Enable export of all user actions to external SIEM', enabled: false, badge: null },
+  ])
+  const [toast, setToast] = useState(null)
+  const [sfConfig, setSfConfig] = useState({ clientId: 'Loading...', clientSecret: 'Loading...' })
 
   useEffect(() => {
-    if (connected) {
-      if (activeNav === 'Reports') fetchReports()
-      if (activeNav === 'Opportunities') fetchOpportunities()
-      if (activeNav === 'Accounts') fetchAccounts()
-      if (activeNav === 'Contacts') fetchContacts()
-      if (activeNav === 'Tasks') fetchTasks()
-      if (activeNav === 'Calendar') fetchEvents()
-      if (activeNav === 'Groups') fetchGroups()
-    }
-  }, [activeNav, connected])
-
-  // ──────────────────────────────────────────────────────────────
-  // CHECK FOR OAUTH SUCCESS RETURN & AUTO-FETCH
-  // ──────────────────────────────────────────────────────────────
-  useEffect(() => {
-    const query = new URLSearchParams(window.location.search)
-    const oauthStatus = query.get('oauth')
-
-    if (oauthStatus === 'success') {
-      window.history.replaceState({}, document.title, "/")
-      refreshAllSFData(false)
-    } else if (oauthStatus === 'error') {
-      const msg = query.get('msg')
-      alert("Salesforce Connection Failed: " + msg)
-      window.history.replaceState({}, document.title, "/")
-    } else {
-      refreshAllSFData(true)
-    }
+    fetch('http://localhost:3001/api/config')
+      .then(r => r.json())
+      .then(d => setSfConfig(d))
+      .catch(e => setSfConfig({ clientId: 'Error fetching Config', clientSecret: 'Error fetching Config' }))
   }, [])
 
-  // Build live data if connected, else use mock defaults
-  const sfData = (sfLeads || sfOpportunities.length > 0) ? buildDashboardData(sfLeads || [], sfOpportunities) : null
-  const activeKPIs = sfData?.dynKPIs || kpis
-  const activeRevenue = sfData?.revenueDataSF || revenueData
-  const activeChannels = sfData?.channelDataSF || channelData
-  const activeConversion = sfData?.conversionDataSF || conversionData
-  const activeCustomerRows = sfData?.customerRowsSF || customerRows
-  const activeActivity = sfData?.activitySF || activityFeed
-  const leadsToUse = sfLeads || fallbackLeads
+  const showToast = useCallback((message, type = 'success') => {
+    setToast({ message, type })
+  }, [])
 
-  function handleSFLoad(leads, mode) {
-    setSfLeads(leads)
-    setConnected(true)
-    setLastSync(new Date().toLocaleTimeString())
-    setShowModal(false)
-    setMessages(m => [...m, { role: 'ai', text: `✅ Loaded ${leads.length} leads from Salesforce ${mode === 'oauth' ? 'via OAuth API' : 'via CSV export'}! I can now answer questions based on your real data.` }])
-  }
+  const chatRef = useRef(null)
 
   useEffect(() => {
     if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight
   }, [messages, typing])
 
-  const dateOptions = ['Today', 'Last 7 Days', 'Last 30 Days', 'Last Quarter', 'This Year']
-
-  async function sendMessage(text) {
-    const q = text || inputVal.trim()
-    if (!q) return
-    setInputVal('')
-    setMessages(m => [...m, { role: 'user', text: q }])
-    setTyping(true)
-
-    const l = q.toLowerCase()
-
-    // ── AI ENGINE DELEGATION ──
-    await new Promise(r => setTimeout(r, 600 + Math.random() * 400))
-    setTyping(false)
-    const reply = generateAIReply(q, sfLeads)
-    setMessages(prev => [...prev, reply])
+  const fetchLiveLeads = async () => {
+    try {
+      const res = await fetch('http://localhost:3001/api/leads')
+      const data = await res.json()
+      if (data.success) {
+        setSfLeads(data.leads); setConnected(true); setLastSync(new Date().toLocaleTimeString())
+      }
+    } catch (e) { }
   }
 
-  const rowsPerPage = 5
-  const filteredRows = activeCustomerRows.filter(r =>
-    !search || r.name.toLowerCase().includes(search.toLowerCase()) || r.company.toLowerCase().includes(search.toLowerCase())
-  )
-  const totalPages = Math.max(1, Math.ceil(filteredRows.length / rowsPerPage))
-  const pageRows = filteredRows.slice((page - 1) * rowsPerPage, page * rowsPerPage)
+  // Click away listener for menu
+  useEffect(() => {
+    const handleOutside = () => closeActionMenu()
+    if (menuData) window.addEventListener('click', handleOutside)
+    return () => window.removeEventListener('click', handleOutside)
+  }, [menuData])
+
+  const fetchLiveOpps = async () => {
+    try {
+      const res = await fetch('http://localhost:3001/api/opportunities')
+      const data = await res.json()
+      if (data.success) setSfOpportunities(data.opportunities)
+    } catch (e) { }
+  }
+
+  const fetchAllData = useCallback(async () => {
+    try {
+      const endpoints = [
+        { key: 'leads', url: 'leads', setter: setSfLeads },
+        { key: 'opportunities', url: 'opportunities', setter: setSfOpportunities },
+        { key: 'accounts', url: 'accounts', setter: setSfAccounts },
+        { key: 'contacts', url: 'contacts', setter: setSfContacts },
+        { key: 'tasks', url: 'tasks', setter: setSfTasks },
+        { key: 'events', url: 'events', setter: setSfEvents },
+        { key: 'groups', url: 'groups', setter: setSfGroups },
+        { key: 'reports', url: 'reports', setter: setSfReports },
+        { key: 'campaigns', url: 'campaigns', setter: setSfCampaigns },
+        { key: 'files', url: 'files', setter: setSfFiles },
+      ]
+
+      await Promise.all(endpoints.map(async ({ url, setter, key }) => {
+        const res = await fetch(`http://localhost:3001/api/${url}`)
+        const data = await res.json()
+        if (data.success) {
+          setter(data[key] || data[url] || [])
+          if (url === 'leads') {
+            setConnected(true)
+            setLastSync(new Date().toLocaleTimeString())
+          }
+        }
+      }))
+    } catch (e) {
+      console.error("Sync Error:", e)
+    }
+  }, [])
+
+  // Simulated Real-time Alerts
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const lucky = Math.random() > 0.95
+      if (lucky && connected) {
+        const alertMsg = "🚨 ALERT: High-value Lead assigned to you just now!"
+        setMessages(m => [...m, { role: 'ai', text: alertMsg }].slice(-10))
+        setUnreadCount(prev => isChatOpen ? 0 : prev + 1)
+        showToast("New Intelligent Alert Received", "info")
+        fetchAllData() // Refresh dashboard stats
+      }
+    }, 45000) // Every 45s check for simulated events
+    return () => clearInterval(timer)
+  }, [connected, isChatOpen, fetchAllData, showToast])
+
+
+  useEffect(() => {
+    fetchAllData()
+  }, [fetchAllData])
+
+  const totalPipeline = sfOpportunities.reduce((sum, o) => sum + (o.Amount || 0), 0)
+  const hotLeads = sfLeads.filter(l => (l.Rating || '').toLowerCase() === 'hot').length
+  const convertedLeads = sfLeads.filter(l => (l.Status || '').includes('Converted')).length
+
+  const startResizing = useCallback((e) => {
+    setIsResizing(true)
+    const onMouseMove = (e) => {
+      const newWidth = window.innerWidth - e.clientX
+      if (newWidth > 360 && newWidth < 800) setSidebarWidth(newWidth)
+    }
+    const onMouseUp = () => {
+      setIsResizing(false)
+      document.removeEventListener('mousemove', onMouseMove)
+      document.removeEventListener('mouseup', onMouseUp)
+    }
+    document.addEventListener('mousemove', onMouseMove)
+    document.addEventListener('mouseup', onMouseUp)
+  }, [])
+
+  const detectIntent = (text) => {
+    const lq = text.toLowerCase()
+
+    // Language detection
+    if (lq.includes('உருவாக்கு') || lq.includes('காட்டு') || lq.includes('நீக்கு') || lq.includes('மாற்று')) setChatLanguage('ta')
+    else if (lq.includes('बनाएं') || lq.includes('दिखाएं') || lq.includes('हटाएं') || lq.includes('बदलें')) setChatLanguage('hi')
+    else if (/[A-Za-z]/.test(text)) setChatLanguage('en')
+
+    const objects = ['lead', 'opportunity', 'account', 'contact', 'task', 'event', 'group', 'file']
+    const obj = objects.find(o => lq.includes(o)) || 'Lead'
+    const properObj = obj.charAt(0).toUpperCase() + obj.slice(1)
+
+    // Export Intent
+    if (lq.includes('export') || lq.includes('download') || lq.includes('excel') || lq.includes('pdf')) {
+      return { intent: 'export', object: properObj, format: lq.includes('excel') ? 'excel' : 'pdf' }
+    }
+
+    if (lq.includes('create') || lq.includes('add') || lq.includes('new') || lq.includes('உருவாக்கு') || lq.includes('बनाएं')) return { intent: 'create', object: properObj }
+    if (lq.includes('show all') || lq.includes('list') || lq.includes('காட்டு') || lq.includes('दिखाएं')) return { intent: 'list', object: properObj }
+    if (lq.includes('update') || lq.includes('edit') || lq.includes('change') || lq.includes('மாற்று') || lq.includes('बदलें')) return { intent: 'update', object: properObj }
+    if (lq.includes('delete') || lq.includes('remove') || lq.includes('நீக்கு') || lq.includes('हटाएं')) return { intent: 'delete', object: properObj }
+    if (lq.includes('hot leads')) return { intent: 'analytics', type: 'hot' }
+    if (lq.includes('pipeline') || lq.includes('revenue')) return { intent: 'analytics', type: 'revenue' }
+    if (lq.includes('upload') || lq.includes('attach')) return { intent: 'upload' }
+    return null
+  }
+
+
+  const exportToExcel = (data, name) => {
+    const ws = XLSX.utils.json_to_sheet(data)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, "Sheet1")
+    XLSX.writeFile(wb, `${name}_Report_${new Date().toISOString().slice(0, 10)}.xlsx`)
+  }
+
+  const exportToPDF = (data, title) => {
+    const doc = new jsPDF()
+    doc.text(title, 20, 10)
+    const columns = Object.keys(data[0] || {}).slice(0, 5)
+    const rows = data.map(item => columns.map(c => item[c] || '-'))
+    doc.autoTable({ head: [columns], body: rows, startY: 20 })
+    doc.save(`${title.replace(/\s+/g, '_')}.pdf`)
+  }
+
+  // ── ACTION HANDLERS ──
+
+  const openActionMenu = (e, record, type) => {
+    e.stopPropagation()
+    const rect = e.currentTarget.getBoundingClientRect()
+    setMenuData({
+      x: rect.left + window.scrollX,
+      y: rect.bottom + window.scrollY,
+      record,
+      type
+    })
+  }
+
+  const closeActionMenu = () => setMenuData(null)
+
+  const handleEditRecord = (record, type) => {
+    closeActionMenu()
+    setEditModal({ record, type, fields: FORMS[type] })
+  }
+
+  const handleDeleteRecord = async (record, type) => {
+    closeActionMenu()
+    if (!window.confirm(`⚠️ Permanently delete ${record.Name || record.LastName || 'this record'} from Salesforce?`)) return
+    
+    try {
+      showToast(`Deleting ${type}...`, 'info')
+      const ep = type.toLowerCase() === 'event' ? 'events' : type.toLowerCase() + 's'
+      const res = await fetch(`http://localhost:3001/api/${ep}/${record.Id}`, { method: 'DELETE' })
+      if (res.ok) {
+        showToast(`${type} deleted successfully`, 'success')
+        fetchAllData()
+      } else {
+        const d = await res.json()
+        showToast(`Deletion failed: ${d.error}`, 'error')
+      }
+    } catch (e) {
+      showToast(`Error: ${e.message}`, 'error')
+    }
+  }
+
+  const handleUpdateStage = async (record, newStage) => {
+    closeActionMenu()
+    try {
+      showToast(`Updating stage to ${newStage}...`, 'info')
+      const res = await fetch(`http://localhost:3001/api/opportunities/${record.Id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ StageName: newStage })
+      })
+      if (res.ok) {
+        showToast('Stage updated successfully', 'success')
+        fetchAllData()
+      }
+    } catch (e) {
+      showToast(`Update failed: ${e.message}`, 'error')
+    }
+  }
+
+  const handleSyncRecord = async (type) => {
+    closeActionMenu()
+    showToast('Synchronizing with Salesforce...', 'info')
+    await fetchAllData()
+    showToast('Workspace synchronized', 'success')
+  }
+
+  const sendMessage = async (text, type = null, meta = {}) => {
+    const q = text || inputVal.trim()
+    if (!q && !type) return
+
+    if (abortControllerRef.current) abortControllerRef.current.abort()
+    abortControllerRef.current = new AbortController()
+
+    if (q) {
+      setChatSessions(prev => prev.map(s => {
+        if (s.id === activeSessionId && s.name === 'New Conversation') {
+          return { ...s, name: q.split(' ').slice(0, 5).join(' ') + (q.split(' ').length > 5 ? '...' : '') }
+        }
+        return s
+      }))
+
+      setMessages(m => [...m, { role: 'user', text: q }])
+      setRecentCommands(prev => [q, ...prev.filter(c => c !== q)].slice(0, 10))
+    }
+
+    setInputVal(''); setTyping(true); setIsStreaming(true); setShowSuggestions(false); setSelectedIndex(-1); setUnreadCount(0)
+
+    try {
+      const conversationHistory = messages.map(m => ({
+        role: m.role === 'user' ? 'user' : 'assistant',
+        content: m.text
+      }))
+
+      if (q) conversationHistory.push({ role: 'user', content: q })
+
+      const dataContext = `
+        Current Salesforce State:
+        - Total Leads: ${sfLeads.length}
+        - Total Opportunities: ${sfOpportunities.length}
+        - Total Accounts: ${sfAccounts.length}
+        - Pipeline Value: $${sfOpportunities.reduce((acc, o) => acc + (o.Amount || 0), 0).toLocaleString()}
+        - Top 3 Opportunities: ${sfOpportunities.sort((a,b) => (b.Amount||0) - (a.Amount||0)).slice(0,3).map(o => `${o.Name} ($${(o.Amount||0).toLocaleString()})`).join(', ')}
+        - Active Users: ${sfContacts.length}
+      `
+
+      const systemPrompt = {
+        role: "system",
+        content: `You are an intelligent sales assistant for Antigravity. Help with lead analysis, pipeline forecasting, deal tracking, and Salesforce data.
+        ${dataContext}
+        Always use the data provided above to answer specific questions about the dashboard. Be concise and professional.`
+      }
+
+      const response = await fetch("http://localhost:11434/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        signal: abortControllerRef.current.signal,
+        body: JSON.stringify({
+          model: activeModel,
+          stream: true,
+          messages: [systemPrompt, ...conversationHistory]
+        })
+      })
+
+      if (!response.ok) throw new Error('Ollama not responding')
+
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let assistantText = ""
+      
+      setTyping(false)
+      // Initialize an empty AI message
+      setMessages(prev => [...prev, { role: 'ai', text: "" }])
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        
+        const chunk = decoder.decode(value, { stream: true })
+        const lines = chunk.split('\n')
+        
+        for (const line of lines) {
+          if (!line.trim()) continue
+          try {
+            const json = JSON.parse(line)
+            if (json.message?.content) {
+              assistantText += json.message.content
+              setMessages(prev => {
+                const next = [...prev]
+                const last = next[next.length - 1]
+                if (last && last.role === 'ai') {
+                  last.text = assistantText
+                }
+                return next
+              })
+            }
+          } catch (e) {
+            console.error("Error parsing Ollama chunk", e)
+          }
+        }
+      }
+    } catch (e) {
+      if (e.name === 'AbortError') {
+        console.log('Stream aborted')
+      } else {
+        showToast("Ollama is not running. Please run 'ollama serve' in your terminal.", "error")
+        setMessages(prev => [...prev, { role: 'ai', text: "⚠️ Error: Connection to Ollama failed. Please ensure Ollama is running with 'llama3' model." }])
+      }
+    } finally {
+      setTyping(false)
+      setIsStreaming(false)
+      abortControllerRef.current = null
+    }
+  }
+
+
+
+  const handleBulkWipe = async (object) => {
+    // Confirmation prompt removed per user request: "clear all things dont ask me"
+    
+    try {
+      showToast(`Clearing all ${object}...`, 'info')
+      const mapping = {
+        'Opportunity': 'opportunities',
+        'Account': 'accounts',
+        'Lead': 'leads',
+        'Contact': 'contacts',
+        'Report': 'reports',
+        'Event': 'events',
+        'Task': 'tasks'
+      }
+      const ep = mapping[object] || object.toLowerCase() + 's'
+      const res = await fetch(`http://localhost:3001/api/${ep}/bulk-delete`, { method: 'POST' })
+      let d = {}
+      try {
+        d = await res.json()
+      } catch (jsonErr) {
+        console.error('Failed to parse server response as JSON:', jsonErr)
+        throw new Error(`Server returned non-JSON response (Status: ${res.status})`)
+      }
+
+      if (d.success) {
+        if (d.count === 0 && d.totalAttempted > 0 && !d.note) {
+            showToast(`Clear failed: 0/${d.totalAttempted} ${object} were deleted. (Check logs)`, 'error')
+        } else if (d.note) {
+            showToast(`Task Complete: ${d.count} ${object}s removed. ${d.note}`, 'success')
+        } else {
+            showToast(`Successfully deleted ${d.count} ${object}s`, 'success')
+        }
+        fetchAllData()
+      } else {
+        console.error(`Bulk wipe error for ${object}:`, d.error)
+        showToast(`Error: ${d.error || 'Failed to wipe records'}`, 'error')
+      }
+    } catch (e) {
+      console.error('Wipe operation exception:', e)
+      showToast(`Wipe command failed: ${e.message}`, 'error')
+    }
+  }
+
+  const handleGlobalNuke = async () => {
+    // Zero friction mode: "clear all things dont ask me"
+    try {
+      showToast('☢️ INITIATING GLOBAL NUKE: Clearing ALL core Salesforce data...', 'info')
+      const res = await fetch('http://localhost:3001/api/nuke-all', { method: 'POST' })
+      const d = await res.json()
+      if (d.success) {
+        showToast('✅ GLOBAL NUKE COMPLETE: Salesforce environment sanitized.', 'success')
+        fetchAllData()
+      } else {
+        showToast(`Global Nuke Failed: ${d.error}`, 'error')
+      }
+    } catch (e) {
+      showToast(`Global Nuke operation failed: ${e.message}`, 'error')
+    }
+  }
+
+  const handleDelete = async (object, record) => {
+    // Confirmation dialog removed per user request
+    try {
+      const ep = object.toLowerCase() === 'event' ? 'events' : object.toLowerCase() + 's'
+      const res = await fetch(`http://localhost:3001/api/${ep}/${record.Id}`, { method: 'DELETE' })
+      if (res.ok) {
+        setMessages(prev => [...prev, { role: 'ai', text: `🗑️ **Record Deleted:** ${record.Name || record.LastName} has been removed from Salesforce.` }])
+        fetchAllData()
+      }
+    } catch (e) { }
+  }
+
+  // ── LIVE DATA TRANSFORMATIONS ──
+
+  const quotaData = useMemo(() => {
+    const quota = 1000000
+    const achieved = sfOpportunities.filter(o => o.IsWon).reduce((sum, o) => sum + (o.Amount || 0), 0)
+    return [
+      { name: 'Achieved', value: achieved, fill: '#4F46E5' },
+      { name: 'Remaining', value: Math.max(0, quota - achieved), fill: '#F1F5F9' },
+    ]
+  }, [sfOpportunities])
+
+  const heatMapData = useMemo(() => {
+    const counts = Array.from({ length: 7 }, () => Array(24).fill(0))
+    sfLeads.forEach(l => {
+      if (l.CreatedDate) {
+        const d = new Date(l.CreatedDate)
+        counts[d.getDay()][d.getHours()]++
+      }
+    })
+    return Array.from({ length: 7 }, (_, day) =>
+      Array.from({ length: 24 }, (_, hour) => ({
+        day, hour, value: counts[day][hour]
+      }))
+    ).flat()
+  }, [sfLeads])
+
+  const bubbleData = useMemo(() => {
+    return sfOpportunities.filter(o => o.Amount > 0).slice(0, 15).map(o => ({
+      x: o.Probability || 0,
+      y: (o.Amount || 0) / 1000,
+      z: (o.Amount || 0) / 500,
+      status: o.IsWon ? 'Hot' : o.IsClosed ? 'Cold' : 'Warm',
+      name: o.Name
+    }))
+  }, [sfOpportunities])
+
+  const waterfallData = useMemo(() => {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    const data = months.map(m => ({ month: m, gain: 0, loss: 0, total: 0 }))
+    let runningTotal = 0
+
+    sfOpportunities.forEach(o => {
+      if (o.CloseDate) {
+        const mIdx = new Date(o.CloseDate).getMonth()
+        if (o.IsWon) data[mIdx].gain += (o.Amount || 0)
+        else if (o.IsClosed) data[mIdx].loss -= (o.Amount || 0)
+      }
+    })
+
+    data.forEach(d => {
+      runningTotal += (d.gain + d.loss)
+      d.total = runningTotal
+    })
+    return data
+  }, [sfOpportunities])
+
+  const activeRevenue = useMemo(() => {
+    if (sfOpportunities.length === 0) return DEFAULT_REVENUE_DATA
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    const data = months.map(m => ({ month: m, revenue: 0, benchmark: 150000 }))
+    sfOpportunities.forEach(o => {
+      if (o.CloseDate && o.IsWon) {
+        const mIdx = new Date(o.CloseDate).getMonth()
+        data[mIdx].revenue += (o.Amount || 0)
+      }
+    })
+    return data
+  }, [sfOpportunities])
+
+  const recentSalesforceActivities = useMemo(() => {
+    const leads = sfLeads.slice(0, 5).map(l => ({ id: `l-${l.Id}`, text: `New Lead: ${l.Name} from ${l.Company}`, time: 'Recent', type: 'lead' }))
+    const opps = sfOpportunities.slice(0, 5).map(o => ({ id: `o-${o.Id}`, text: `Opp: ${o.Name} moved to ${o.StageName}`, time: 'Recent', type: 'opp' }))
+    return [...leads, ...opps].sort(() => Math.random() - 0.5).slice(0, 6)
+  }, [sfLeads, sfOpportunities])
+
+  const conversionRate = useMemo(() => {
+    const closed = sfOpportunities.filter(o => o.IsClosed).length
+    const won = sfOpportunities.filter(o => o.IsWon).length
+    return closed > 0 ? ((won / closed) * 100).toFixed(1) : "0.0"
+  }, [sfOpportunities])
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: '#FAFAF8', fontFamily: 'Nunito, sans-serif' }}>
-      {showModal && <ConnectSalesforceModal onClose={() => setShowModal(false)} onLoad={handleSFLoad} />}
+    <div className="flex h-screen overflow-hidden bg-[#FAFAF8] text-slate-900 font-sans tracking-tight">
 
-      {/* ── SIDEBAR ── */}
-      <aside className="w-60 flex-shrink-0 flex flex-col bg-white border-r border-gray-100 shadow-sm" style={{ minHeight: '100vh' }}>
+      {/* ── SIDEBAR (LEFT) ── */}
+      <aside
+        className="flex-shrink-0 flex flex-col bg-white border-r border-gray-100 shadow-xl z-50 relative"
+        style={{ width: sidebarCollapsed ? '68px' : '220px', transition: 'width 300ms cubic-bezier(0.16, 1, 0.3, 1)' }}
+      >
+        {/* Toggle button — sits on the right edge, vertically centred */}
+        <button
+          onClick={toggleSidebar}
+          className="absolute -right-3 top-1/2 -translate-y-1/2 z-50 w-6 h-6 rounded-full bg-white border border-gray-200 shadow-md flex items-center justify-center text-slate-400 hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-all duration-200"
+          title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          <ChevronRight size={12} strokeWidth={3} style={{ transform: sidebarCollapsed ? 'rotate(0deg)' : 'rotate(180deg)', transition: 'transform 300ms cubic-bezier(0.16, 1, 0.3, 1)' }} />
+        </button>
+
         {/* Logo */}
-        <div className="px-5 py-5 border-b border-gray-50">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #4F46E5, #7C3AED)' }}>
-              <Zap size={15} color="#fff" />
-            </div>
-            <div>
-              <div className="text-sm font-bold text-gray-900 font-heading radiant-text">Pulsar AI</div>
-              <div className="text-[10px] text-gray-400 font-medium">Analytics Platform</div>
-            </div>
+        <div className={`flex items-center border-b border-gray-50 overflow-hidden flex-shrink-0 ${sidebarCollapsed ? 'justify-center px-0 py-6' : 'px-6 py-7 gap-3'}`}
+          style={{ transition: 'padding 300ms cubic-bezier(0.16, 1, 0.3, 1)' }}>
+          <div className="w-9 h-9 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-100 flex-shrink-0">
+            <Zap size={18} />
+          </div>
+          <div
+            className="flex flex-col overflow-hidden"
+            style={{ opacity: sidebarCollapsed ? 0 : 1, width: sidebarCollapsed ? 0 : 'auto', transition: 'opacity 200ms, width 300ms cubic-bezier(0.16, 1, 0.3, 1)', whiteSpace: 'nowrap' }}
+          >
+            <div className="font-black text-indigo-900 text-[15px] tracking-tighter leading-none">Pulsar AI</div>
+            <div className="text-[8px] uppercase font-black text-slate-300 tracking-[0.2em] mt-0.5">Analytics Platform</div>
           </div>
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto sidebar-scrollbar">
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-4 mb-4">Main Menu</p>
-          {navItems.map(({ icon: Icon, label }) => (
-            <button key={label} onClick={() => setActiveNav(label)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group nav-item-modern ${activeNav === label ? 'nav-pill-active' : 'text-gray-500 hover:text-gray-900 font-semibold'}`}>
-              <Icon size={18} className={`transition-colors ${activeNav === label ? 'text-indigo-600' : 'text-gray-400 group-hover:text-gray-600'}`} />
-              <span>{label}</span>
-              {activeNav === label && <div className="ml-auto w-1 h-4 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(79,70,229,0.3)]" />}
-            </button>
+        <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto custom-scrollbar">
+          {!sidebarCollapsed && (
+            <div className="px-3 py-2 text-[9px] uppercase font-black text-slate-300 tracking-widest">Main Menu</div>
+          )}
+          {[
+            { icon: LayoutDashboard, label: 'Overview' },
+            { icon: PieChart, label: 'Analytics' },
+            { icon: Zap, label: 'Opportunities' },
+            { icon: Building2, label: 'Accounts' },
+            { icon: UserPlus, label: 'Leads' },
+            { icon: Contact, label: 'Contacts' },
+            { icon: Calendar, label: 'Calendar' },
+            { icon: FileText, label: 'Files' },
+            { icon: BarChart3, label: 'Reports' },
+            { icon: Users2, label: 'Groups' },
+            { icon: ClipboardList, label: 'Tasks' },
+            { icon: Target, label: 'Campaigns' },
+            { icon: Share2, label: 'Integrations' },
+            { icon: Settings, label: 'Settings' },
+          ].map(({ icon: Icon, label }) => (
+            <div key={label} className="relative group">
+              <button
+                onClick={() => setActiveNav(label)}
+                className={`w-full flex items-center py-3 rounded-2xl text-[13px] font-black transition-all ${sidebarCollapsed ? 'justify-center px-0' : 'gap-4 px-4'
+                  } ${activeNav === label
+                    ? sidebarCollapsed
+                      ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200'
+                      : 'bg-indigo-50 text-indigo-600 shadow-sm shadow-indigo-100/50'
+                    : 'text-slate-400 hover:text-indigo-400 hover:bg-indigo-50/30'
+                  }`}
+              >
+                <Icon size={18} strokeWidth={activeNav === label ? 3 : 2} className="flex-shrink-0" />
+                <span
+                  style={{ opacity: sidebarCollapsed ? 0 : 1, width: sidebarCollapsed ? 0 : 'auto', overflow: 'hidden', whiteSpace: 'nowrap', transition: 'opacity 200ms, width 300ms cubic-bezier(0.16, 1, 0.3, 1)' }}
+                >{label}</span>
+              </button>
+              {/* Tooltip in collapsed mode */}
+              {sidebarCollapsed && (
+                <div className="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 ml-3 z-[200] opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                  <div className="bg-indigo-600 text-white text-[11px] font-black px-3 py-1.5 rounded-xl shadow-lg whitespace-nowrap">
+                    {label}
+                    <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-indigo-600" />
+                  </div>
+                </div>
+              )}
+            </div>
           ))}
         </nav>
 
-        {/* Sidebar Footer Padding */}
-        <div className="flex-shrink-0 p-4 border-t border-gray-50 bg-gray-50/20">
-          {/* Status Badge */}
-          <button onClick={() => setShowModal(true)}
-            className={`w-full py-2.5 rounded-xl flex items-center justify-center gap-2 text-xs font-bold transition-all border shadow-sm mb-4 ${connected ? 'bg-white border-emerald-100 text-emerald-600' : 'bg-white border-indigo-100 text-indigo-600'}`}>
-            {connected
-              ? (isSyncing
-                ? <><RefreshCw size={13} className="animate-spin text-emerald-400" />Syncing...</>
-                : <><span className="w-1.5 h-1.5 bg-emerald-500 rounded-full pulse-ring" />Connected</>)
-              : <><Cloud size={13} />Connect CRM</>}
-          </button>
+        {/* Bottom section */}
+        <div className={`border-t border-gray-50 flex flex-col gap-3 ${sidebarCollapsed ? 'px-2 py-3 items-center' : 'p-5'}`}
+          style={{ transition: 'padding 300ms cubic-bezier(0.16, 1, 0.3, 1)' }}>
+          {/* Connected indicator */}
+          <div
+            className={`rounded-2xl flex items-center justify-center border-[1.5px] transition-all cursor-pointer ${connected ? 'border-emerald-100 text-emerald-600 bg-emerald-50' : 'border-indigo-100 text-indigo-600 bg-indigo-50'
+              } ${sidebarCollapsed ? 'w-9 h-9' : 'px-3 py-2.5 gap-2'}`}
+            onClick={() => !connected && setShowModal(true)}
+          >
+            <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${connected ? 'bg-emerald-500 animate-pulse' : 'bg-indigo-400'}`} />
+            <span
+              className="text-[10px] font-black uppercase tracking-widest"
+              style={{ opacity: sidebarCollapsed ? 0 : 1, width: sidebarCollapsed ? 0 : 'auto', overflow: 'hidden', whiteSpace: 'nowrap', transition: 'opacity 200ms, width 300ms cubic-bezier(0.16, 1, 0.3, 1)' }}
+            >{connected ? 'Connected' : 'Connect CRM'}</span>
+          </div>
 
-          {/* User Card */}
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold text-white shadow-md transition-transform hover:scale-110 cursor-pointer" style={{ background: 'linear-gradient(135deg, #10B981, #059669)' }}>DD</div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold text-gray-900 truncate">Divya Dharshini</p>
-              <p className="text-[10px] text-gray-500 font-medium truncate">Workspace Owner</p>
+          {/* User row */}
+          <div className={`flex items-center overflow-hidden ${sidebarCollapsed ? 'justify-center' : 'gap-3 px-1'}`}>
+            <div className="w-9 h-9 rounded-2xl bg-emerald-100 flex items-center justify-center font-black text-emerald-600 text-xs flex-shrink-0">DD</div>
+            <div
+              className="flex flex-col"
+              style={{ opacity: sidebarCollapsed ? 0 : 1, width: sidebarCollapsed ? 0 : 'auto', overflow: 'hidden', whiteSpace: 'nowrap', transition: 'opacity 200ms, width 300ms cubic-bezier(0.16, 1, 0.3, 1)' }}
+            >
+              <span className="text-[13px] font-black text-slate-800 leading-none">Divya Dharshini</span>
+              <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Workspace Owner</span>
             </div>
-            <button className="text-gray-400 hover:text-gray-600 transition-colors">
-              <Settings size={14} />
-            </button>
           </div>
         </div>
       </aside>
 
-      {/* ── MAIN ── */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-
-        {/* ── TOP NAVBAR ── */}
-        <header className="flex items-center justify-between px-6 py-3.5 bg-white border-b border-gray-100 shadow-sm flex-shrink-0">
-          <div>
-            <h1 className="text-lg font-extrabold text-gray-900 font-heading radiant-text tracking-tight">{activeNav}</h1>
-            <div className="flex items-center gap-2 mt-0.5">
-              {connected
-                ? <><span className="w-1.5 h-1.5 bg-emerald-400 rounded-full pulse-ring" /><span className="text-xs text-emerald-600 font-semibold">Salesforce Live · {sfLeads?.length} leads · synced {lastSync}</span></>
-                : <><span className="w-1.5 h-1.5 bg-amber-400 rounded-full" /><span className="text-xs text-amber-600">Demo data</span>
-                  <button onClick={() => setShowModal(true)} className="text-xs text-indigo-600 font-semibold hover:underline ml-1">Connect Salesforce →</button></>}
-            </div>
+      {/* ── MAIN DASHBOARD (CENTER) ── */}
+      <div className={`flex-1 flex flex-col min-w-0 overflow-hidden transition-all duration-500`}>
+        <header className="h-20 flex items-center justify-between px-10 bg-white/60 backdrop-blur-xl border-b border-gray-50 z-40 sticky top-0">
+          <div className="flex flex-col">
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight">{activeNav}</h1>
+            {connected && <div className="text-[10px] font-black text-emerald-500 flex items-center gap-1.5 uppercase tracking-widest"><span className="w-1 h-1 bg-emerald-500 rounded-full" /> Salesforce Live — {sfLeads.length} leads — synced {lastSync}</div>}
           </div>
 
-          <div className="flex items-center gap-3">
-            {/* Search */}
-            <div className="flex items-center gap-2 bg-gray-50 rounded-xl px-3 py-2 w-56 border border-gray-100 focus-within:border-indigo-300 transition-colors">
-              <Search size={14} className="text-gray-400 flex-shrink-0" />
-              <input className="bg-transparent outline-none text-sm text-gray-700 placeholder-gray-400 flex-1"
-                placeholder="Search..." />
+          <div className="flex items-center gap-4">
+            <div className="relative hidden xl:flex items-center bg-gray-100/50 rounded-2xl px-5 py-2.5 border border-transparent focus-within:border-indigo-200 focus-within:bg-white transition-all shadow-inner">
+              <Search size={16} className="text-slate-300" />
+              <input value={search} onChange={e => setSearch(e.target.value)} className="bg-transparent text-[13px] px-3 font-bold outline-none w-64" placeholder="Quick search data streams..." />
             </div>
 
-            {/* Date Picker */}
-            <div className="relative">
-              <button onClick={() => setShowDateDD(d => !d)}
-                className="flex items-center gap-2 text-sm font-medium text-gray-600 bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 hover:bg-gray-100 transition-colors">
-                <Calendar size={14} className="text-gray-500" />
-                {dateRange}
-                <ChevronDown size={13} className="text-gray-400" />
-              </button>
-              {showDateDD && (
-                <div className="absolute right-0 top-full mt-1.5 <EPHEMERAL_MESSAGE>
-w-44 bg-white rounded-xl shadow-lg border border-gray-100 z-50 py-1">
-                  {dateOptions.map(o => (
-                    <button key={o} onClick={() => { setDateRange(o); setShowDateDD(false) }}
-                      className={`w-full text-left px-4 py-2 text-sm transition-colors hover:bg-indigo-50 ${dateRange === o ? 'text-indigo-600 font-semibold' : 'text-gray-600'}`}>
-                      {o}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            <div className="h-10 w-px bg-gray-100 mx-2" />
 
-            {/* Connect / Sync */}
-            <button onClick={() => connected ? refreshAllSFData(false) : setShowModal(true)}
-              className="flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-xl transition-all border group"
-              style={{ background: connected ? '#F0FDF4' : 'white', border: `1px solid ${connected ? '#86EFAC' : '#E5E7EB'}`, color: connected ? '#166534' : '#374151' }}>
-              {connected ? (
-                isSyncing ? (
-                  <><RefreshCw size={14} className="animate-spin text-emerald-500" />Syncing Hub...</>
-                ) : (
-                  <><Wifi size={14} className="text-emerald-500 group-hover:scale-110 transition-transform" />Live Hub</>
-                )
-              ) : <><Upload size={14} />Import SF</>}
-            </button>
-            <button className="flex items-center gap-2 text-sm font-semibold text-white px-4 py-2 rounded-xl transition-all hover:opacity-90"
-              style={{ background: 'linear-gradient(135deg, #4F46E5, #7C3AED)' }}>
-              <Download size={14} />
-              Export
+            <button className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-100 rounded-2xl text-[11px] font-black text-slate-600 shadow-sm hover:shadow-md transition-all">
+              <Calendar size={16} /> Last 30 Days <ChevronDown size={14} />
             </button>
 
-            {/* Notif */}
-            <div className="relative">
-              <button onClick={() => setShowNotif(v => !v)}
-                className="w-9 h-9 flex items-center justify-center rounded-xl bg-gray-50 border border-gray-100 text-gray-500 hover:text-gray-700 relative transition-colors">
-                <Bell size={16} />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
-              </button>
-              {showNotif && (
-                <div className="absolute right-0 top-full mt-1.5 w-72 bg-white rounded-xl shadow-xl border border-gray-100 z-50 p-3">
-                  <p className="text-xs font-bold text-gray-700 mb-2 px-1">Notifications</p>
-                  {activityFeed.slice(0, 3).map((a, i) => (
-                    <div key={i} className="flex items-start gap-2.5 px-2 py-2 rounded-lg hover:bg-gray-50 transition-colors">
-                      <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: `${a.color}18` }}>
-                        <a.icon size={11} style={{ color: a.color }} />
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-700">{a.text}</p>
-                        <p className="text-[10px] text-gray-400 mt-0.5">{a.time}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            <button
+              onClick={() => { fetchAllData(); showToast('Salesforce data synchronized', 'success') }}
+              className="px-5 py-2.5 bg-indigo-50 border border-indigo-100 text-indigo-600 rounded-2xl text-[11px] font-black flex items-center gap-2 hover:bg-indigo-100 transition-all"
+            >
+              <RefreshCw size={16} className={typing ? 'animate-spin' : ''} /> Sync Salesforce
+            </button>
 
-            {/* Avatar */}
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold text-white" style={{ background: 'linear-gradient(135deg, #4F46E5, #7C3AED)' }}>SA</div>
+            <button className="px-5 py-2.5 bg-indigo-600 text-white rounded-2xl text-[11px] font-black flex items-center gap-2 shadow-lg shadow-indigo-100 hover:shadow-xl hover:scale-[1.02] transition-all">
+              <FileDown size={16} /> Export
+            </button>
+
+            <div className="flex items-center gap-2 ml-4">
+              <button className="w-10 h-10 rounded-2xl bg-white border border-gray-100 text-slate-400 flex items-center justify-center relative hover:bg-gray-50 transition-colors"><BellRing size={18} /><span className="absolute top-2.5 right-2.5 w-2 h-2 bg-rose-500 rounded-full border-2 border-white shadow-sm shadow-rose-200" /></button>
+              <div className="w-10 h-10 rounded-2xl bg-slate-900 flex items-center justify-center font-black text-white text-xs shadow-lg">SA</div>
+            </div>
           </div>
         </header>
 
-        {/* ── BODY WRAPPER ── */}
-        <div className="flex-1 flex overflow-hidden relative">
-          <main className="flex-1 overflow-y-auto grid-bg p-6 space-y-6 pb-12">
+        <main className="flex-1 overflow-y-auto p-10 space-y-10 custom-scrollbar pb-32">
+          {activeNav === 'Overview' && (
+            <>
+              {/* KPI SECTION */}
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8">
+                <KPICard label="Pipeline Value" value={`$${(totalPipeline / 1000).toFixed(1)}K`} change="+28.4%" positive={true} icon={DollarSign} color="#4F46E5" secondaryLabel="Current Potential" />
+                <KPICard label="Conversion Rate" value={`${conversionRate}%`} change="+4.2%" positive={true} icon={RefreshCw} color="#F59E0B" secondaryLabel="Deals Won" />
+                <KPICard label="Active Leads" value={connected ? sfLeads.length : "0"} change="+21.0%" positive={true} icon={Users} color="#10B981" secondaryLabel="Source: Salesforce" />
+                <KPICard label="Active Deals" value={sfOpportunities.length} icon={Layers} color="#818CF8" secondaryLabel={`${sfOpportunities.filter(o => o.IsWon).length} Won`} />
+              </div>
 
-            {activeNav === 'Overview' && (
-              <>
-                {/* ── KPI CARDS ── */}
-                <div ref={kpiSectionRef} className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-                  {activeKPIs.map((kpi, i) => (
-                    <div key={i}
-                      onClick={() => { setSelectedKPI(kpi.label); setShowKPIModal(true) }}
-                      className={`premium-card rounded-2xl p-5 hover:shadow-xl transition-all duration-300 cursor-pointer fade-up-${i + 1} relative overflow-hidden kpi-card-lift ${selectedKPI === kpi.label ? 'ring-2 ring-indigo-500 ring-offset-2' : ''}`}>
-                      {kpi.live && (
-                        <span className="absolute top-4 right-4 flex items-center gap-1.5">
-                          {isSyncing ? (
-                            <RefreshCw size={10} className="text-emerald-500 animate-spin" />
-                          ) : (
-                            <span className="w-2 h-2 rounded-full pulse-ring inline-block" style={{ background: '#10B981' }} />
-                          )}
-                          <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">{isSyncing ? 'Syncing' : 'Live'}</span>
-                        </span>
-                      )}
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: kpi.bgColor }}>
-                          <kpi.icon size={17} style={{ color: kpi.color }} />
-                        </div>
-                        <span className={`flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full ${kpi.positive ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'}`}>
-                          {kpi.positive ? <ArrowUpRight size={10} /> : <ArrowDownRight size={10} />}{kpi.change}
-                        </span>
+              {/* PIPELINE VALUE ANALYSIS — Flashcard */}
+              <div className="bg-white rounded-[40px] overflow-hidden border border-slate-100 shadow-lg shadow-slate-100/60 hover:shadow-2xl hover:shadow-indigo-100/30 transition-all duration-500">
+                {/* Gradient header */}
+                <div className="relative px-10 pt-8 pb-7 overflow-hidden" style={{ background: 'linear-gradient(135deg, #4F46E5 0%, #7C3AED 60%, #818CF8 100%)' }}>
+                  <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: 'radial-gradient(circle at 70% 50%, white 1px, transparent 1px)', backgroundSize: '18px 18px' }} />
+                  <div className="flex items-start justify-between mb-6">
+                    <div>
+                      <p className="text-[9px] font-black text-white/50 uppercase tracking-[0.25em] mb-1">Revenue Intelligence</p>
+                      <h3 className="text-[20px] font-black text-white leading-tight tracking-tight">Pipeline Value Analysis</h3>
+                    </div>
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/15 border border-white/20 backdrop-blur-sm">
+                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      <span className="text-[9px] font-black text-white uppercase tracking-widest">Live Engine</span>
+                    </div>
+                  </div>
+                  {/* KPI strip */}
+                  <div className="flex items-center gap-8">
+                    <div>
+                      <div className="text-[28px] font-black text-white leading-none">${(totalPipeline / 1000).toFixed(1)}k</div>
+                      <div className="text-[8px] font-black text-white/50 uppercase tracking-widest mt-1">Total Pipeline</div>
+                    </div>
+                    <div>
+                      <div className="text-[20px] font-black text-white leading-none">+28.4%</div>
+                      <div className="text-[8px] font-black text-white/50 uppercase tracking-widest mt-1">Growth vs LM</div>
+                    </div>
+                    <div>
+                      <div className="text-[20px] font-black text-emerald-300 leading-none">On Track</div>
+                      <div className="text-[8px] font-black text-white/50 uppercase tracking-widest mt-1">vs Benchmark</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Chart body */}
+                <div className="px-10 pt-8 pb-4">
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-5">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-indigo-600" />
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Actual Revenue</span>
                       </div>
-                      <div className="text-2xl font-extrabold font-heading mb-0.5 radiant-text">{kpi.value}</div>
-                      <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{kpi.label}</div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-[2px] bg-emerald-500" style={{ backgroundImage: 'repeating-linear-gradient(90deg,#10B981 0,#10B981 6px,transparent 6px,transparent 12px)' }} />
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Benchmark</span>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 p-1 bg-gray-50 rounded-xl border border-gray-100">
+                      <button className="px-4 py-1.5 bg-indigo-600 text-white rounded-lg text-[10px] font-black">Default</button>
+                      <button className="px-4 py-1.5 text-slate-400 rounded-lg text-[10px] font-black hover:text-indigo-600 transition-colors">Trend</button>
+                    </div>
+                  </div>
+                  <div className="h-[320px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <ComposedChart data={activeRevenue} margin={{ top: 10, right: 10, bottom: 0, left: -10 }}>
+                        <defs>
+                          <linearGradient id="pipelineGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#4F46E5" stopOpacity={0.18} />
+                            <stop offset="100%" stopColor="#4F46E5" stopOpacity={0.01} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="5 5" vertical={false} stroke="#F1F5F9" />
+                        <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 900, fill: '#CBD5E1' }} dy={10} />
+                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 900, fill: '#CBD5E1' }} tickFormatter={v => `$${v / 1000}k`} />
+                        <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#818CF8', strokeWidth: 1.5, strokeDasharray: '4 4' }} />
+                        <Area type="monotone" dataKey="revenue" name="Actual" stroke="#4F46E5" strokeWidth={3} fill="url(#pipelineGrad)" dot={false} activeDot={{ r: 6, fill: '#4F46E5', stroke: '#fff', strokeWidth: 3 }} />
+                        <Line type="monotone" dataKey="benchmark" name="Benchmark" stroke="#10B981" strokeWidth={2} strokeDasharray="8 5" dot={false} activeDot={{ r: 5, fill: '#10B981', stroke: '#fff', strokeWidth: 2 }} />
+                      </ComposedChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                {/* Footer insight strip */}
+                <div className="mx-10 mb-8 px-6 py-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between">
+                  <p className="text-[11px] font-black text-slate-600">Pipeline growing steadily. Jan–Feb performance exceeded benchmark by 9.4%. Maintain deal velocity.</p>
+                  <div className="flex items-center gap-3 ml-6 flex-shrink-0">
+                    <button onClick={() => setIsChatOpen(true)} className="px-4 py-2 rounded-xl bg-indigo-600 text-white text-[10px] font-black hover:bg-indigo-700 transition-colors whitespace-nowrap">Ask AI</button>
+                    <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full whitespace-nowrap">↑ +28.4%</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* RECENT ACTIVITY SECTION */}
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-black tracking-tight flex items-center gap-3"><Activity size={20} className="text-indigo-600" /> Recent Activity</h3>
+                  <button className="text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:underline">View All Activities</button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {recentSalesforceActivities.map(act => (
+                    <div key={act.id} className="bg-white p-5 rounded-[32px] border border-gray-100 shadow-sm flex items-center gap-4 hover:shadow-lg transition-all group cursor-pointer">
+                      <div className="w-11 h-11 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-100 group-hover:scale-110 transition-transform"><Briefcase size={18} /></div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[13px] font-black text-slate-800 line-clamp-1">{act.text}</div>
+                        <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">{act.time}</div>
+                      </div>
                     </div>
                   ))}
                 </div>
+              </div>
 
-                {/* ── DYNAMIC ANALYTICS DRILL-DOWN ── */}
-                <div id="drilldown-analysis" className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 fade-up-3">
-                  <div className="flex items-center justify-between mb-6">
-                    <div>
-                      <h3 className="text-base font-bold text-gray-900 font-heading capitalize">{selectedKPI} Analysis</h3>
-                      <p className="text-xs text-gray-400 mt-0.5">Deep-dive insights from live Salesforce metadata</p>
+              {/* TABLE SECTION */}
+              <div className="bg-white rounded-[48px] border border-gray-100 overflow-hidden shadow-sm shadow-slate-200/10">
+                <div className="px-10 py-8 border-b border-gray-50 flex flex-col md:flex-row justify-between items-center gap-4">
+                  <h3 className="font-black text-xl tracking-tight">Salesforce Leads</h3>
+                  <div className="flex items-center gap-4 w-full md:w-auto">
+                    <div className="flex-1 md:flex-none relative flex items-center bg-gray-50 rounded-2xl px-4 py-2 border border-slate-200 shadow-inner">
+                      <Search size={14} className="text-slate-300" />
+                      <input className="bg-transparent text-xs px-2 outline-none w-full md:w-48 font-bold" placeholder="Search customers..." />
                     </div>
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-2 text-[10px] font-bold text-indigo-600 bg-indigo-50/50 px-2.5 py-1 rounded-lg border border-indigo-100 uppercase tracking-tight">
-                        {isSyncing ? <RefreshCw size={10} className="animate-spin" /> : <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full pulse-ring" />}
-                        {isSyncing ? 'Syncing...' : `Salesforce Live Engine · ${lastSync}`}
+                    <button className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white border border-slate-200 text-xs font-black text-slate-600"><Filter size={16} /> Filter</button>
+                    <button onClick={() => sendMessage("create a new lead")} className="flex items-center gap-2 px-6 py-2.5 rounded-2xl bg-indigo-600 text-white text-xs font-black shadow-lg shadow-indigo-100 hover:scale-105 active:scale-95 transition-all"><Plus size={16} /> Add Customer</button>
+                  </div>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead><tr className="bg-slate-50/50 text-[10px] font-black uppercase text-slate-400 tracking-[0.2em]"><th className="px-10 py-5">Client</th><th className="px-10 py-5">Status</th><th className="px-10 py-5">Est. Pipeline</th><th className="px-10 py-5 text-right pr-14">Action</th></tr></thead>
+                    <tbody className="divide-y divide-gray-50">{(sfLeads || []).slice(0, 5).map((l, i) => (
+                      <tr key={i} className="hover:bg-indigo-50/10 transition-colors group">
+                        <td className="px-10 py-6 flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center font-black text-indigo-600 text-sm">{l.Name ? l.Name[0] : 'U'}</div>
+                          <div>
+                            <div className="font-black text-[15px] text-slate-800">{l.Name}</div>
+                            <div className="text-[11px] font-bold text-slate-400">{l.Company}</div>
+                          </div>
+                        </td>
+                        <td className="px-10 py-6"><HealthBadge status={l.Rating === 'Hot' ? 'Healthy' : 'At Risk'} /></td>
+                        <td className="px-10 py-6 font-black text-slate-900 text-[15px]">${Math.floor(getLeadValue(l)).toLocaleString()}</td>
+                        <td className="px-10 py-6 text-right pr-14"><button onClick={(e) => openActionMenu(e, l, 'Lead')} className="text-slate-300 hover:text-indigo-600"><MoreHorizontal size={20} /></button></td>
+                      </tr>
+                    ))}</tbody>
+                  </table>
+                </div>
+              </div>
+
+            </>
+          )}
+
+          {activeNav === 'Leads' && (
+            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-[20px] bg-indigo-600 flex items-center justify-center text-white shadow-xl shadow-indigo-100">
+                    <UserPlus size={24} />
+                  </div>
+                  <div>
+                    <h2 className="text-3xl font-black text-slate-900 tracking-tighter">Leads Intelligence</h2>
+                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Showing {sfLeads.length} live CRM prospects synced</p>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <button onClick={() => sendMessage("create a new lead")} className="px-6 py-3 bg-slate-900 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-lg shadow-slate-100 flex items-center gap-2"><Plus size={16} /> New Lead</button>
+                </div>
+              </div>
+
+              <LeadsIntelligenceSummary leads={sfLeads} />
+
+              <MainRegistryTable
+                title="Lead Registry"
+                icon={Activity}
+                data={sfLeads}
+                columns={[
+                  {
+                    label: 'Lead Identity', key: 'Name', render: (r) => (
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center font-black text-xs text-slate-400 border border-slate-100">{r.Name ? r.Name[0] : 'L'}</div>
+                        <div className="flex flex-col">
+                          <div className="font-black text-slate-800">{r.Name}</div>
+                          <div className="text-[10px] text-slate-400 font-bold">{r.Email || 'no-email@sf.com'}</div>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1.5">
-                        <button className="px-2.5 py-1 rounded bg-indigo-600 text-white text-[10px] font-bold shadow-sm shadow-indigo-200">Default</button>
-                        <button className="px-2.5 py-1 rounded hover:bg-gray-50 text-gray-400 text-[10px] font-bold border border-transparent hover:border-gray-100">Trend</button>
+                    )
+                  },
+                  {
+                    label: 'Company', key: 'Company', render: (r) => (
+                      <div className="font-bold text-slate-500">{r.Company}</div>
+                    )
+                  },
+                  {
+                    label: 'Status', key: 'Status', render: (r) => (
+                      <div className="flex items-center gap-2">
+                        <div className={`w-1.5 h-1.5 rounded-full ${r.Status === 'Working - Contacted' ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+                        <div className="text-[11px] font-black text-slate-700">{r.Status}</div>
                       </div>
+                    )
+                  },
+                  {
+                    label: 'Quality Score', key: 'Rating', render: (r) => (
+                      <div className={`px-3 py-1 rounded-full text-[9px] font-black uppercase inline-block ${r.Rating === 'Hot' ? 'bg-rose-50 text-rose-500 border border-rose-100' : 'bg-slate-50 text-slate-400 border border-slate-100'}`}>{r.Rating || 'Neutral'}</div>
+                    )
+                  }
+                ]}
+                onActionClick={(e, row) => openActionMenu(e, row, 'Lead')}
+                onAdd={(e) => setShowCreateMenu({ x: e.clientX, y: e.clientY })}
+                onWipeAll={() => handleBulkWipe('Lead')}
+              />
+            </div>
+          )}
+
+          {activeNav === 'Opportunities' && (
+            <MainRegistryTable
+              title="Salesforce Opportunities"
+              icon={Zap}
+              data={sfOpportunities}
+              columns={[
+                {
+                  label: 'Deal Name', key: 'Name', render: (r) => (
+                    <div className="font-black text-slate-800">{r.Name}</div>
+                  )
+                },
+                {
+                  label: 'Amount', key: 'Amount', render: (r) => (
+                    <div className="font-black text-slate-900">${(r.Amount || 0).toLocaleString()}</div>
+                  )
+                },
+                {
+                  label: 'Stage', key: 'StageName', render: (r) => (
+                    <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase inline-block ${r.IsWon ? 'bg-emerald-50 text-emerald-600' : r.IsClosed ? 'bg-rose-50 text-rose-600' : 'bg-amber-50 text-amber-600'}`}>{r.StageName}</div>
+                  )
+                },
+                { label: 'Close Date', key: 'CloseDate' }
+              ]}
+              onActionClick={(e, row) => openActionMenu(e, row, 'Opportunity')}
+              onAdd={(e) => setShowCreateMenu({ x: e.clientX, y: e.clientY })}
+              onWipeAll={() => handleBulkWipe('Opportunity')}
+            />
+          )}
+
+          {activeNav === 'Accounts' && (
+            <MainRegistryTable
+              title="Salesforce Accounts"
+              icon={Building2}
+              data={sfAccounts}
+              columns={[
+                {
+                  label: 'Organization', key: 'Name', render: (r) => (
+                    <div className="font-black text-slate-800">{r.Name}</div>
+                  )
+                },
+                { label: 'Industry', key: 'Industry' },
+                { label: 'Type', key: 'Type' },
+                {
+                  label: 'Website', key: 'Website', render: (r) => (
+                    <a href={r.Website} target="_blank" rel="noreferrer" className="text-indigo-600 hover:underline font-bold text-xs">{r.Website}</a>
+                  )
+                }
+              ]}
+              onActionClick={(e, row) => openActionMenu(e, row, 'Account')}
+              onAdd={(e) => setShowCreateMenu({ x: e.clientX, y: e.clientY })}
+              onWipeAll={() => handleBulkWipe('Account')}
+            />
+          )}
+
+          {activeNav === 'Contacts' && (
+            <MainRegistryTable
+              title="Salesforce Contacts"
+              icon={Contact}
+              data={sfContacts}
+              columns={[
+                {
+                  label: 'Member', key: 'Name', render: (r) => (
+                    <div className="font-black text-slate-800">{r.Name}</div>
+                  )
+                },
+                { label: 'Position', key: 'Title' },
+                {
+                  label: 'Account', key: 'Account', render: (r) => (
+                    <div className="text-slate-500 font-bold">{r.Account?.Name || '-'}</div>
+                  )
+                },
+                { label: 'Email', key: 'Email' }
+              ]}
+              onActionClick={(e, row) => openActionMenu(e, row, 'Contact')}
+              onAdd={(e) => setShowCreateMenu({ x: e.clientX, y: e.clientY })}
+              onWipeAll={() => handleBulkWipe('Contact')}
+            />
+          )}
+
+          {activeNav === 'Calendar' && (
+            <MainRegistryTable
+              title="Salesforce Events"
+              icon={Calendar}
+              data={sfEvents}
+              columns={[
+                {
+                  label: 'Event', key: 'Subject', render: (r) => (
+                    <div className="font-black text-slate-800">{r.Subject}</div>
+                  )
+                },
+                {
+                  label: 'Start', key: 'StartDateTime', render: (r) => (
+                    <div className="text-[11px] font-bold">{new Date(r.StartDateTime).toLocaleString()}</div>
+                  )
+                },
+                {
+                  label: 'End', key: 'EndDateTime', render: (r) => (
+                    <div className="text-[11px] font-bold">{new Date(r.EndDateTime).toLocaleString()}</div>
+                  )
+                },
+                { label: 'Location', key: 'Location' }
+              ]}
+              onActionClick={(e, row) => openActionMenu(e, row, 'Event')}
+              onAdd={(e) => setShowCreateMenu({ x: e.clientX, y: e.clientY })}
+            />
+          )}
+
+          {activeNav === 'Files' && (
+            <MainRegistryTable
+              title="Salesforce Files"
+              icon={FileText}
+              data={sfFiles}
+              columns={[
+                {
+                  label: 'Title', key: 'Title', render: (r) => (
+                    <div className="font-black text-slate-800 flex items-center gap-2"><FileText size={14} className="text-slate-300" /> {r.Title}</div>
+                  )
+                },
+                {
+                  label: 'Type', key: 'FileExtension', render: (r) => (
+                    <div className="uppercase font-black text-slate-400 text-[10px]">{r.FileExtension}</div>
+                  )
+                },
+                {
+                  label: 'Size', key: 'ContentSize', render: (r) => (
+                    <div className="text-[10px] font-bold text-slate-400">{(r.ContentSize / 1024).toFixed(1)} KB</div>
+                  )
+                },
+                {
+                  label: 'Modified', key: 'LastModifiedDate', render: (r) => (
+                    <div className="text-[10px] font-bold">{new Date(r.LastModifiedDate).toLocaleDateString()}</div>
+                  )
+                }
+              ]}
+              onActionClick={(e, row) => openActionMenu(e, row, 'File')}
+              onAdd={() => sendMessage("upload a file")}
+            />
+          )}
+
+          {activeNav === 'Reports' && (
+            <MainRegistryTable
+              title="Salesforce Reports"
+              icon={BarChart3}
+              data={sfReports}
+              columns={[
+                {
+                  label: 'Report Name', key: 'Name', render: (r) => (
+                    <div className="font-black text-slate-800">{r.Name}</div>
+                  )
+                },
+                { label: 'Format', key: 'Format' },
+                {
+                  label: 'Last Run', key: 'LastRunDate', render: (r) => (
+                    <div className="text-[10px] font-bold">{r.LastRunDate ? new Date(r.LastRunDate).toLocaleString() : 'Never'}</div>
+                  )
+                }
+              ]}
+              onActionClick={(e, row) => openActionMenu(e, row, 'Report')}
+              onWipeAll={() => handleBulkWipe('Report')}
+            />
+          )}
+
+          {activeNav === 'Groups' && (
+            <MainRegistryTable
+              title="Collaboration Groups"
+              icon={Users2}
+              data={sfGroups}
+              columns={[
+                {
+                  label: 'Group Name', key: 'Name', render: (r) => (
+                    <div className="font-black text-slate-800">{r.Name}</div>
+                  )
+                },
+                {
+                  label: 'Description', key: 'Description', render: (r) => (
+                    <div className="text-xs text-slate-400 line-clamp-1 max-w-xs">{r.Description || '-'}</div>
+                  )
+                },
+                { label: 'Type', key: 'CollaborationType' }
+              ]}
+              onActionClick={(e, row) => openActionMenu(e, row, 'Group')}
+              onAdd={(e) => setShowCreateMenu({ x: e.clientX, y: e.clientY })}
+            />
+          )}
+
+          {activeNav === 'Tasks' && (
+            <MainRegistryTable
+              title="Open Tasks"
+              icon={ClipboardList}
+              data={sfTasks}
+              columns={[
+                {
+                  label: 'Task', key: 'Subject', render: (r) => (
+                    <div className="font-black text-slate-800">{r.Subject}</div>
+                  )
+                },
+                {
+                  label: 'Status', key: 'Status', render: (r) => (
+                    <div className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${r.Status === 'Completed' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-400'}`}>{r.Status}</div>
+                  )
+                },
+                {
+                  label: 'Priority', key: 'Priority', render: (r) => (
+                    <div className={`font-black text-[10px] ${r.Priority === 'High' ? 'text-rose-500' : 'text-slate-400'}`}>{r.Priority}</div>
+                  )
+                },
+                { label: 'Due Date', key: 'ActivityDate' }
+              ]}
+              onActionClick={(e, row) => openActionMenu(e, row, 'Task')}
+              onAdd={(e) => setShowCreateMenu({ x: e.clientX, y: e.clientY })}
+            />
+          )}
+
+          {activeNav === 'Analytics' && (
+            <div className="space-y-8">
+              <div className="flex items-center justify-between">
+                <h3 className="text-2xl font-black tracking-tight flex items-center gap-3"><TrendingUp size={24} className="text-primary" /> Intelligence Hub</h3>
+                <div className="flex gap-2 p-1 bg-gray-50 rounded-2xl border border-gray-100">
+                  <button className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-[10px] font-black">AI Optimized</button>
+                  <button className="px-4 py-2 text-slate-400 rounded-xl text-[10px] font-black hover:text-indigo-600 transition-colors">Raw Stream</button>
+                </div>
+              </div>
+
+              {/* 2x2 CHART GRID */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 pb-32">
+                <div className="lg:col-span-1">
+                  <QuotaAttainmentGauge data={quotaData} />
+                </div>
+                <div className="lg:col-span-1">
+                  <LeadActivityHeatMap data={heatMapData} />
+                </div>
+                <div className="lg:col-span-1">
+                  <DealSizeBubbleChart data={bubbleData} />
+                </div>
+                <div className="lg:col-span-1">
+                  <MonthlyWaterfallChart data={waterfallData} />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeNav === 'Campaigns' && (
+            <MainRegistryTable
+              title="Marketing Campaigns"
+              icon={Target}
+              data={sfCampaigns}
+              columns={[
+                {
+                  label: 'Campaign', key: 'Name', render: (r) => (
+                    <div className="font-black text-slate-800">{r.Name}</div>
+                  )
+                },
+                {
+                  label: 'Status', key: 'Status', render: (r) => (
+                    <div className={`px-3 py-1 rounded-full text-[9px] font-black uppercase inline-block ${r.Status === 'Active' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
+                      r.Status === 'Planned' ? 'bg-amber-50 text-amber-600 border border-amber-100' :
+                        'bg-slate-50 text-slate-400 border border-slate-100'
+                      }`}>{r.Status || 'Draft'}</div>
+                  )
+                },
+                { label: 'Type', key: 'Type' },
+                { label: 'Start Date', key: 'StartDate' }
+              ]}
+              onActionClick={(e, row) => openActionMenu(e, row, 'Campaign')}
+            />
+          )}
+
+          {activeNav === 'Integrations' && (
+            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+              {/* Header */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-3xl font-black text-slate-900 tracking-tighter">Integrations Hub</h2>
+                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Manage your connected apps, webhooks, and data streams</p>
+                </div>
+                <button onClick={() => setShowConnectAppModal(true)} className="px-6 py-3 bg-indigo-600 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 flex items-center gap-2 hover:scale-[1.02] active:scale-95">
+                  <Plus size={16} /> Connect App
+                </button>
+              </div>
+
+              {/* Summary Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                {[
+                  { label: 'Active Connections', value: Object.values(appStatuses).filter(s => s === 'Connected').length, icon: Wifi, color: '#10B981', bg: '#ECFDF5' },
+                  { label: 'Webhooks Live', value: webhooks.length, icon: Zap, color: '#4F46E5', bg: '#EEF2FF' },
+                  { label: 'Data Synced Today', value: '2.4 GB', icon: Cloud, color: '#F59E0B', bg: '#FFFBEB' },
+                  { label: 'Sync Errors', value: '0', icon: ShieldAlert, color: '#10B981', bg: '#ECFDF5' },
+                ].map((s, i) => (
+                  <div key={i} className="bg-white rounded-[32px] p-6 border border-gray-100 shadow-sm flex flex-col gap-3 hover:shadow-lg transition-all cursor-default">
+                    <div className="w-11 h-11 rounded-2xl flex items-center justify-center" style={{ background: s.bg }}>
+                      <s.icon size={20} style={{ color: s.color }} />
+                    </div>
+                    <div>
+                      <div className="text-2xl font-black text-slate-900">{s.value}</div>
+                      <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">{s.label}</div>
                     </div>
                   </div>
+                ))}
+              </div>
 
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Primary Graph Area */}
-                    <div className="lg:col-span-2">
-                      {selectedKPI === 'Pipeline Value' && (
-                        <ResponsiveContainer width="100%" height={320}>
-                          <AreaChart data={activeRevenue}>
-                            <defs>
-                              <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#4F46E5" stopOpacity={0.1} />
-                                <stop offset="95%" stopColor="#4F46E5" stopOpacity={0} />
-                              </linearGradient>
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />
-                            <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#9CA3AF' }} dy={10} />
-                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#9CA3AF' }} tickFormatter={v => `$${v / 1000}k`} />
-                            <Tooltip content={<CustomTooltip />} />
-                            <Area type="monotone" dataKey="revenue" stroke="#4F46E5" strokeWidth={3} fillOpacity={1} fill="url(#colorRev)" />
-                            <Area type="monotone" dataKey="target" stroke="#10B981" strokeWidth={2} strokeDasharray="5 5" fill="none" />
-                          </AreaChart>
-                        </ResponsiveContainer>
-                      )}
-                      {(selectedKPI === 'Salesforce Leads' || selectedKPI === 'Leads') && (
-                        <ResponsiveContainer width="100%" height={320}>
-                          <BarChart data={activeRevenue}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />
-                            <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#9CA3AF' }} dy={10} />
-                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#9CA3AF' }} />
-                            <Tooltip content={<CustomTooltip />} />
-                            <Bar dataKey="revenue" fill="#4F46E5" radius={[4, 4, 0, 0]} />
-                          </BarChart>
-                        </ResponsiveContainer>
-                      )}
-                      {selectedKPI === 'Converted' && (
-                        <ResponsiveContainer width="100%" height={320}>
-                          <BarChart data={activeConversion} layout="vertical" barSize={24}>
-                            <XAxis type="number" hide />
-                            <YAxis dataKey="stage" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 'bold' }} />
-                            <Tooltip cursor={{ fill: 'transparent' }} />
-                            <Bar dataKey="value" radius={[0, 4, 4, 0]} />
-                          </BarChart>
-                        </ResponsiveContainer>
-                      )}
-                      {selectedKPI === 'Hot Leads' && (
-                        <div className="space-y-4">
-                          <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">High Priority Summary</h4>
-                          {sfLeads?.filter(l => (l.Rating || l.rating || '').toLowerCase() === 'hot').slice(0, 5).map((l, i) => (
-                            <div key={i} className="flex items-center justify-between p-3 rounded-xl border border-gray-50 bg-gray-50/30">
-                              <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-xs">
-                                  {l.Name?.[0]}
-                                </div>
-                                <div>
-                                  <div className="text-sm font-bold text-gray-800">{l.Name}</div>
-                                  <div className="text-[10px] text-gray-400">{l.Company}</div>
-                                </div>
-                              </div>
-                              <div className="text-right">
-                                <div className="text-xs font-bold text-indigo-600">${getLeadValue(l).toLocaleString()}</div>
-                                <div className="text-[10px] text-emerald-600 font-semibold tracking-wide uppercase">Priority</div>
-                              </div>
-                            </div>
-                          ))}
+              {/* Connected Apps */}
+              <div className="bg-white rounded-[48px] border border-gray-100 shadow-sm overflow-hidden">
+                <div className="px-10 py-8 border-b border-gray-50 flex items-center justify-between">
+                  <h3 className="font-black text-xl tracking-tight flex items-center gap-3"><Globe size={22} className="text-indigo-600" /> Connected Applications</h3>
+                  <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-100">{Object.values(appStatuses).filter(s => s === 'Connected').length} ACTIVE</span>
+                </div>
+                <div className="divide-y divide-gray-50">
+                  {[
+                    { name: 'Salesforce CRM', desc: 'Primary data source — live bi-directional sync', icon: '☁️', lastSync: lastSync || 'Just now', records: `${sfLeads.length + sfOpportunities.length + sfAccounts.length} records`, canDisconnect: false },
+                    { name: 'Slack', desc: 'Sales alert notifications and deal closure pings', icon: '💬', lastSync: '3 mins ago', records: '12 channels', canDisconnect: true },
+                    { name: 'Google Analytics', desc: 'Website traffic and lead source attribution', icon: '📊', lastSync: '15 mins ago', records: '8.2K sessions', canDisconnect: true },
+                    { name: 'HubSpot', desc: 'Marketing funnel and campaign performance data', icon: '🚀', lastSync: '1 hr ago', records: '342 contacts', canDisconnect: true },
+                    { name: 'Zapier', desc: 'Automated workflows and cross-platform triggers', icon: '⚡', lastSync: 'Never', records: '—', canDisconnect: true },
+                    { name: 'Stripe', desc: 'Payment and subscription revenue intelligence', icon: '💳', lastSync: 'Authorization required', records: '—', canDisconnect: false },
+                  ].map((app, i) => {
+                    const status = appStatuses[app.name] || 'Inactive'
+                    return (
+                      <div key={i} className="px-10 py-6 flex items-center justify-between hover:bg-slate-50/40 transition-colors group">
+                        <div className="flex items-center gap-5">
+                          <div className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-2xl shadow-sm">{app.icon}</div>
+                          <div>
+                            <div className="font-black text-[15px] text-slate-800">{app.name}</div>
+                            <div className="text-[11px] font-bold text-slate-400 mt-0.5">{app.desc}</div>
+                          </div>
                         </div>
-                      )}
-                    </div>
+                        <div className="flex items-center gap-6">
+                          <div className="text-right hidden md:block">
+                            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Last Sync</div>
+                            <div className="text-[12px] font-black text-slate-600 mt-0.5">{status === 'Connected' ? app.lastSync : '—'}</div>
+                          </div>
+                          <div className="text-right hidden lg:block">
+                            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Volume</div>
+                            <div className="text-[12px] font-black text-slate-600 mt-0.5">{status === 'Connected' ? app.records : '—'}</div>
+                          </div>
+                          <div className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${status === 'Connected' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                            status === 'Pending' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                              'bg-slate-50 text-slate-400 border-slate-100'
+                            }`}>
+                            {status === 'Connected' && <span className="inline-block w-1.5 h-1.5 bg-emerald-500 rounded-full mr-1.5 animate-pulse" />}
+                            {status}
+                          </div>
+                          {app.canDisconnect && (
+                            <button
+                              onClick={() => {
+                                const newStatus = status === 'Connected' ? 'Inactive' : 'Connected'
+                                setAppStatuses(prev => ({ ...prev, [app.name]: newStatus }))
+                                showToast(`${app.name} ${newStatus === 'Connected' ? 'reconnected' : 'disconnected'} successfully`, newStatus === 'Connected' ? 'success' : 'info')
+                              }}
+                              className={`w-9 h-9 rounded-2xl flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 ${status === 'Connected'
+                                ? 'bg-rose-50 text-rose-400 hover:bg-rose-100 hover:text-rose-600'
+                                : 'bg-emerald-50 text-emerald-500 hover:bg-emerald-100'
+                                }`}
+                              title={status === 'Connected' ? 'Disconnect' : 'Reconnect'}
+                            >
+                              {status === 'Connected' ? <X size={14} /> : <Wifi size={14} />}
+                            </button>
+                          )}
+                          {!app.canDisconnect && status === 'Pending' && (
+                            <button
+                              onClick={() => { setAppStatuses(prev => ({ ...prev, [app.name]: 'Connected' })); showToast(`${app.name} authorization initiated`, 'info') }}
+                              className="w-9 h-9 rounded-2xl flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 bg-amber-50 text-amber-500 hover:bg-amber-100"
+                              title="Authorize"
+                            >
+                              <Key size={14} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
 
-                    {/* Right Contextual Info */}
-                    <div className="bg-gray-50/50 rounded-2xl p-5 border border-gray-100">
-                      <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Metric Context</h4>
-                      <div className="space-y-6">
+              {/* Webhooks */}
+              <div className="bg-white rounded-[48px] border border-gray-100 shadow-sm overflow-hidden">
+                <div className="px-10 py-8 border-b border-gray-50 flex items-center justify-between">
+                  <h3 className="font-black text-xl tracking-tight flex items-center gap-3"><Zap size={22} className="text-indigo-600" /> Active Webhooks</h3>
+                  <button onClick={() => setShowAddWebhookModal(true)} className="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-2xl text-[10px] font-black uppercase tracking-widest border border-indigo-100 hover:bg-indigo-100 transition-all flex items-center gap-2 hover:scale-[1.02] active:scale-95">
+                    <Plus size={14} /> Add Webhook
+                  </button>
+                </div>
+                <div className="divide-y divide-gray-50">
+                  {webhooks.length === 0 && (
+                    <div className="px-10 py-16 text-center text-[11px] font-black text-slate-300 uppercase tracking-widest">No webhooks configured yet</div>
+                  )}
+                  {webhooks.map((wh) => (
+                    <div key={wh.id} className="px-10 py-5 flex items-center justify-between hover:bg-slate-50/30 transition-colors group">
+                      <div className="flex items-center gap-5">
+                        <div className="px-3 py-1 bg-indigo-600 text-white rounded-lg text-[9px] font-black">{wh.method}</div>
                         <div>
-                          <p className="text-xs text-gray-500 leading-relaxed">
-                            {selectedKPI === 'Pipeline Value' && "Total estimated value of your Salesforce funnel based on hot/warm ratings."}
-                            {selectedKPI === 'Hot Leads' && "High-intent records that are currently in 'New' status and require immediate outbound."}
-                            {selectedKPI === 'Converted' && "Success rate of leads moving through the Open-Working-Qualified lifecycle."}
-                            {selectedKPI === 'Salesforce Leads' && "Monthly ingestion volume of new lead data from your live CRM connection."}
-                          </p>
+                          <div className="font-black text-[13px] text-slate-800">{wh.event}</div>
+                          <div className="text-[10px] font-bold text-slate-400 font-mono mt-0.5 truncate max-w-xs">{wh.url}</div>
                         </div>
-                        <div className="pt-4 border-t border-gray-100">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-[11px] font-bold text-gray-400 uppercase">Benchmark</span>
-                            <span className="text-[11px] font-bold text-emerald-600">+12% vs LY</span>
-                          </div>
-                          <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                            <div className="h-full bg-indigo-500 rounded-full w-[65%]" />
-                          </div>
+                      </div>
+                      <div className="flex items-center gap-8 text-right">
+                        <div>
+                          <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Calls</div>
+                          <div className="text-[13px] font-black text-slate-700">{wh.calls.toLocaleString()}</div>
                         </div>
-                        <button onClick={() => sendMessage(`Run a full report on ${selectedKPI}`)}
-                          className="w-full py-2 bg-white border border-gray-200 rounded-xl text-[11px] font-bold text-gray-600 hover:bg-gray-50 transition-colors">
-                          Ask AI for deep-dive
+                        <div>
+                          <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Success Rate</div>
+                          <div className={`text-[13px] font-black ${wh.success >= 99 ? 'text-emerald-600' : 'text-amber-500'}`}>{wh.success}%</div>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setWebhooks(prev => prev.filter(w => w.id !== wh.id))
+                            showToast(`Webhook '${wh.event}' removed`, 'info')
+                          }}
+                          className="w-8 h-8 rounded-xl bg-slate-50 text-slate-300 hover:bg-rose-50 hover:text-rose-500 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100"
+                        >
+                          <X size={14} />
                         </button>
                       </div>
                     </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Salesforce Configuration */}
+              <div className="bg-white rounded-[48px] border border-gray-100 shadow-sm overflow-hidden mb-8">
+                <div className="px-10 py-8 border-b border-gray-50 flex items-center justify-between">
+                  <h3 className="font-black text-xl tracking-tight flex items-center gap-3"><Shield size={22} className="text-indigo-600" /> Salesforce Configuration</h3>
+                  <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-full border border-slate-100">OAuth 2.0 Credentials</div>
+                </div>
+                <div className="px-10 py-8 grid grid-cols-1 gap-6">
+                  {[
+                    { label: 'Client ID', value: sfConfig.clientId },
+                    { label: 'Client Secret', value: sfConfig.clientSecret }
+                  ].map((cred, idx) => (
+                    <div key={idx} className="p-6 bg-slate-50/50 rounded-[28px] border border-slate-100 flex flex-col gap-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-black text-slate-700 uppercase tracking-widest">{cred.label}</span>
+                        <button 
+                          onClick={() => { navigator.clipboard.writeText(cred.value); showToast(`${cred.label} copied!`, 'success') }}
+                          className="flex items-center gap-2 px-3 py-1.5 bg-white hover:bg-indigo-50 border border-slate-200 rounded-xl text-[10px] font-black text-slate-500 hover:text-indigo-600 transition-all shadow-sm"
+                        >
+                          <Copy size={12} /> Copy
+                        </button>
+                      </div>
+                      <div className="font-mono text-[12px] text-slate-500 bg-white px-4 py-3 rounded-2xl border border-slate-100 tracking-tight break-all">
+                        {cred.value}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* API Access Tokens */}
+              <div className="bg-white rounded-[48px] border border-gray-100 shadow-sm overflow-hidden">
+                <div className="px-10 py-8 border-b border-gray-50 flex items-center justify-between">
+                  <h3 className="font-black text-xl tracking-tight flex items-center gap-3"><Key size={22} className="text-indigo-600" /> API Access Tokens</h3>
+                  <button onClick={() => showToast('New API key generated!', 'success')} className="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-2xl text-[10px] font-black uppercase tracking-widest border border-indigo-100 hover:bg-indigo-100 transition-all flex items-center gap-2">
+                    <Plus size={14} /> Generate Key
+                  </button>
+                </div>
+                <div className="px-10 py-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {apiTokens.map((tk) => (
+                    <div key={tk.id} className="p-6 bg-slate-50/50 rounded-[28px] border border-slate-100 flex flex-col gap-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-black text-slate-700">{tk.name}</span>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-[8px] font-black uppercase px-2 py-1 rounded-full border ${tk.active ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-slate-100 text-slate-400 border-slate-200'}`}>{tk.active ? 'Active' : 'Revoked'}</span>
+                          <button
+                            onClick={() => { setApiTokens(prev => prev.map(t => t.id === tk.id ? { ...t, active: !t.active } : t)); showToast(tk.active ? 'Token revoked' : 'Token reactivated', tk.active ? 'info' : 'success') }}
+                            className="text-[8px] font-black text-slate-400 hover:text-rose-500 uppercase tracking-widest px-2 py-1 rounded-lg hover:bg-rose-50 transition-all"
+                          >{tk.active ? 'Revoke' : 'Activate'}</button>
+                        </div>
+                      </div>
+                      <div className="font-mono text-[11px] text-slate-400 bg-slate-100 px-4 py-3 rounded-2xl tracking-wider flex items-center justify-between gap-2">
+                        <span className="truncate">{tk.revealed ? tk.fullKey : tk.key}</span>
+                        <div className="flex gap-1 flex-shrink-0">
+                          <button
+                            onClick={() => setApiTokens(prev => prev.map(t => t.id === tk.id ? { ...t, revealed: !t.revealed } : t))}
+                            className="p-1.5 rounded-lg bg-white hover:bg-indigo-50 text-slate-400 hover:text-indigo-600 transition-all"
+                            title={tk.revealed ? 'Hide' : 'Reveal'}
+                          >
+                            <Eye size={12} />
+                          </button>
+                          <button
+                            onClick={() => { navigator.clipboard.writeText(tk.fullKey); showToast('API key copied to clipboard!', 'success') }}
+                            className="p-1.5 rounded-lg bg-white hover:bg-indigo-50 text-slate-400 hover:text-indigo-600 transition-all"
+                            title="Copy"
+                          >
+                            <FileText size={12} />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="flex justify-between text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                        <span>Scope: {tk.scope}</span>
+                        <span>Expires: {tk.expires}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* DANGER ZONE: GLOBAL NUKE */}
+              <div className="bg-rose-50/30 rounded-[48px] border border-rose-100/50 shadow-sm overflow-hidden mt-10">
+                <div className="px-10 py-8 border-b border-rose-100/50 flex items-center justify-between bg-rose-50/20">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-rose-600 flex items-center justify-center text-white shadow-lg shadow-rose-200">
+                      <ShieldAlert size={22} />
+                    </div>
+                    <div>
+                      <h3 className="font-black text-xl tracking-tight text-rose-900">Danger Zone</h3>
+                      <p className="text-[10px] font-black text-rose-400 uppercase tracking-widest mt-0.5">Critical Workspace Actions</p>
+                    </div>
                   </div>
                 </div>
-                {/* ── RECENT ACTIVITY TILE ── */}
-                <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 fade-up-4 mt-6">
-                  <div className="flex items-center justify-between mb-5">
-                    <div>
-                      <h3 className="text-sm font-bold text-gray-900 font-heading">Recent Activity</h3>
-                      <p className="text-xs text-gray-400 mt-0.5">Automated event stream from your connected workspace</p>
-                    </div>
-                    <button className="text-xs text-indigo-600 font-semibold hover:text-indigo-800 transition-colors">View All Activities</button>
+                <div className="px-10 py-10 flex items-center justify-between gap-10">
+                  <div className="flex-1">
+                    <p className="text-[15px] font-black text-slate-800 tracking-tight">Global Data Sanitation (Nuke All Records)</p>
+                    <p className="text-xs font-bold text-slate-400 mt-1 lines-clamp-2">This command will iterate through all core Salesforce objects (Leads, Opps, Accounts, Contacts, Tasks, Events) and permanently delete every record. This action is instantaneous and irreversible.</p>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {activeActivity.slice(0, 3).map((a, i) => (
-                      <div key={i} className="flex items-center gap-3 p-4 rounded-xl border border-gray-50 bg-gray-50/20 hover:bg-gray-50 transition-colors">
-                        <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm" style={{ background: a.color }}>
-                          <a.icon size={15} color="#fff" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-bold text-gray-800 truncate">{a.text}</p>
-                          <p className="text-[10px] text-gray-400 mt-0.5">{a.time}</p>
-                        </div>
+                  <button 
+                    onClick={handleGlobalNuke}
+                    className="flex-shrink-0 px-8 py-4 bg-rose-600 text-white rounded-[24px] text-[11px] font-black uppercase tracking-[0.15em] hover:bg-rose-700 active:scale-95 transition-all shadow-xl shadow-rose-200 flex items-center gap-2"
+                  >
+                    <Trash2 size={16} /> Nuke All Salesforce Data
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeNav === 'Settings' && (
+            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+              {/* Header */}
+              <div>
+                <h2 className="text-3xl font-black text-slate-900 tracking-tighter">Account Settings</h2>
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Manage your workspace, preferences, and security</p>
+              </div>
+
+              {/* Profile Section */}
+              <div className="bg-white rounded-[48px] border border-gray-100 shadow-sm overflow-hidden">
+                <div className="px-10 py-8 border-b border-gray-50">
+                  <h3 className="font-black text-xl tracking-tight flex items-center gap-3"><User size={22} className="text-indigo-600" /> Profile & Identity</h3>
+                </div>
+                <div className="px-10 py-8 flex flex-col md:flex-row items-start gap-10">
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="w-24 h-24 rounded-[28px] bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center font-black text-white text-3xl shadow-xl shadow-indigo-100">{profile.name?.[0] || 'D'}</div>
+                    <label className="text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:underline cursor-pointer">
+                      <input type="file" accept="image/*" className="hidden" onChange={() => showToast('Avatar updated!', 'success')} />
+                      Change Avatar
+                    </label>
+                  </div>
+                  <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {[
+                      { label: 'Full Name', key: 'name' },
+                      { label: 'Role', key: 'role', readonly: true },
+                      { label: 'Email Address', key: 'email', type: 'email' },
+                      { label: 'Phone', key: 'phone', type: 'tel' },
+                      { label: 'Organization', key: 'org' },
+                      { label: 'Region', key: 'region' },
+                    ].map((f) => (
+                      <div key={f.key}>
+                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">{f.label}</label>
+                        {f.readonly ? (
+                          <div className="bg-slate-50 px-4 py-3.5 rounded-2xl text-[13px] font-black text-slate-400 border border-slate-100">{profile[f.key]}</div>
+                        ) : (
+                          <input
+                            type={f.type || 'text'}
+                            value={profile[f.key]}
+                            onChange={e => { setProfile(p => ({ ...p, [f.key]: e.target.value })); setProfileDirty(true) }}
+                            className="w-full bg-slate-50 px-4 py-3.5 rounded-2xl text-[13px] font-black text-slate-700 border border-slate-100 outline-none focus:ring-4 ring-indigo-50 focus:bg-white transition-all"
+                          />
+                        )}
                       </div>
                     ))}
                   </div>
                 </div>
-
-                {/* ── CUSTOMERS TABLE ── */}
-                <div className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow overflow-hidden fade-up-5" style={{ border: '1px solid #F3F4F6' }}>
-                  <div className="flex items-center justify-between px-6 py-4 border-b border-gray-50">
-                    <div>
-                      <h3 className="text-sm font-bold text-gray-900 font-heading">{connected ? 'Salesforce Leads' : 'Customers'}</h3>
-                      <p className="text-xs text-gray-400 mt-0.5">{filteredRows.length} {connected ? 'leads from Salesforce' : 'total customers'}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-1.5 bg-gray-50 rounded-lg px-3 py-1.5 border border-gray-100">
-                        <SearchIcon size={12} className="text-gray-400" />
-                        <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }}
-                          placeholder="Search customers…" className="bg-transparent outline-none text-xs text-gray-700 placeholder-gray-400 w-40" />
-                      </div>
-                      <button className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 bg-gray-50 border border-gray-100 px-3 py-1.5 rounded-lg hover:bg-gray-100 transition-colors">
-                        <Filter size={12} />Filter
-                      </button>
-                      <button className="flex items-center gap-1.5 text-xs font-semibold text-white px-3 py-1.5 rounded-lg transition-opacity hover:opacity-90" style={{ background: '#4F46E5' }}>
-                        <Plus size={12} />Add Customer
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-gray-50" style={{ background: '#FAFAFA' }}>
-                          {[['Name/Company', ''], ['Plan', 'plan'], ['MRR', 'mrr'], ['Status', 'health'], ['Joined', 'joined'], ['']].map(([label, col], i) => (
-                            <th key={i} onClick={() => label && col && (setSortCol(col), setSortDir(d => d === 'asc' ? 'desc' : 'asc'))}
-                              className={`px-5 py-3 text-left text-[11px] font-bold uppercase tracking-wide text-gray-400 whitespace-nowrap ${col ? 'cursor-pointer hover:text-indigo-500 transition-colors' : ''}`}>
-                              {label} {col && sortCol === col ? (sortDir === 'asc' ? '↑' : '↓') : ''}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {pageRows.length === 0
-                          ? <tr><td colSpan={6} className="px-5 py-10 text-center text-sm text-gray-400">No customers found.</td></tr>
-                          : pageRows.map((r, i) => (
-                            <tr key={i} className="border-b border-gray-50 hover:bg-indigo-50/30 transition-colors">
-                              <td className="px-5 py-3.5">
-                                <div className="flex items-center gap-2.5">
-                                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
-                                    style={{ background: `hsl(${(i * 47 + 200) % 360}, 70%, 55%)` }}>
-                                    {r.name.split(' ').map(n => n[0]).join('')}
-                                  </div>
-                                  <div>
-                                    <div className="text-sm font-semibold text-gray-800 whitespace-nowrap">{r.name}</div>
-                                    <div className="text-[11px] text-gray-400">{r.company}</div>
-                                  </div>
-                                </div>
-                              </td>
-                              <td className="px-5 py-3.5"><PlanBadge plan={r.plan} /></td>
-                              <td className="px-5 py-3.5 font-bold text-gray-800">{r.mrr}</td>
-                              <td className="px-5 py-3.5"><HealthBadge status={r.health} /></td>
-                              <td className="px-5 py-3.5 text-xs text-gray-500">{r.joined}</td>
-                              <td className="px-5 py-3.5">
-                                <button className="text-gray-400 hover:text-gray-600 transition-colors"><MoreHorizontal size={15} /></button>
-                              </td>
-                            </tr>
-                          ))}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  <div className="flex items-center justify-between px-6 py-3 border-t border-gray-50">
-                    <span className="text-xs text-gray-400">Page {page} of {totalPages} · {filteredRows.length} customers</span>
-                    <div className="flex gap-1.5">
-                      <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-                        className="px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-500 hover:text-gray-800 bg-gray-50 border border-gray-100 disabled:opacity-30 transition-colors">← Prev</button>
-                      <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-                        className="px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-500 hover:text-gray-800 bg-gray-50 border border-gray-100 disabled:opacity-30 transition-colors">Next →</button>
-                    </div>
-                  </div>
-                </div>
-              </>)}
-
-            {activeNav === 'Analytics' && (
-              <div className="fade-up-1 space-y-6">
-                {/* ── AUTOMATIC EXECUTIVE SUMMARY ── */}
-                <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ background: 'linear-gradient(135deg, #4F46E5, #7C3AED)' }}>
-                    <Bot size={24} color="#fff" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-sm font-bold text-gray-900 font-heading mb-1.5 flex items-center gap-2">
-                      Dynamic Executive Summary
-                      <span className="text-[10px] bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded uppercase tracking-wider">Auto-Updating</span>
-                    </h3>
-                    <p className="text-xs text-gray-600 leading-relaxed max-w-4xl">
-                      {(() => {
-                        const topChannel = [...activeChannels].sort((a, b) => b.value - a.value)[0]
-                        const totalFunnel = activeConversion.reduce((s, a) => s + a.value, 0)
-                        const convRate = ((activeConversion.find(c => c.stage === 'Converted')?.value || 0) / (activeConversion.find(c => c.stage === 'New')?.value || 1) * 100).toFixed(1)
-                        const dropPoint = activeConversion.reduce((prev, curr, i, arr) => {
-                          if (i === 0) return prev
-                          const drop = arr[i - 1].value - curr.value
-                          return drop > prev.drop ? { stage: arr[i - 1].stage, drop } : prev
-                        }, { stage: '', drop: 0 })
-
-                        return (
-                          <>
-                            Analysis of your current workspace indicates that <strong className="text-indigo-600">{topChannel.name}</strong> remains your strongest acquisition channel, accounting for **{topChannel.value}%** of total lead volume.
-                            Your current conversion efficiency from New to Converted is sitting at <strong className="text-emerald-600">{convRate}%</strong>.
-                            Data indicates a notable drop-off at the <strong className="text-amber-600">{dropPoint.stage}</strong> stage—optimizing this touchpoint could potentially increase overall conversion by up to 15%.
-                          </>
-                        )
-                      })()}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                  <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                    <div className="flex items-center justify-between mb-6">
-                      <h3 className="text-sm font-bold text-gray-900 font-heading">Acquisition Channels</h3>
-                      <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Market Mix</div>
-                    </div>
-                    <ResponsiveContainer width="100%" height={300}>
-                      <RePieChart>
-                        <Pie data={activeChannels} cx="50%" cy="50%" innerRadius={80} outerRadius={110} dataKey="value" paddingAngle={4}>
-                          {activeChannels.map((e, i) => <Cell key={i} fill={e.color} stroke="none" />)}
-                        </Pie>
-                        <Tooltip content={({ active, payload }) => active && payload?.[0] ? (
-                          <div className="bg-white rounded-xl shadow-xl border border-gray-100 px-4 py-3 text-xs">
-                            <p className="font-bold text-gray-800 mb-1">{payload[0].name}</p>
-                            <p className="font-semibold" style={{ color: payload[0].payload.color }}>{payload[0].value}% Share</p>
-                          </div>
-                        ) : null} />
-                        <Legend verticalAlign="bottom" iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, fontWeight: 'bold', paddingTop: 20 }} />
-                      </RePieChart>
-                    </ResponsiveContainer>
-                  </div>
-
-                  <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                    <div className="flex items-center justify-between mb-6">
-                      <h3 className="text-sm font-bold text-gray-900 font-heading">Conversion Funnel</h3>
-                      <div className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">Efficiency View</div>
-                    </div>
-                    <ResponsiveContainer width="100%" height={300}>
-                      <LineChart data={activeConversion} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#F3F4F6" opacity={0.6} />
-                        <XAxis dataKey="stage" tick={{ fill: '#9CA3AF', fontSize: 11, fontWeight: 'bold' }} axisLine={false} tickLine={false} dy={10} />
-                        <YAxis tick={{ fill: '#9CA3AF', fontSize: 11 }} axisLine={false} tickLine={false} />
-                        <Tooltip content={<CustomTooltip />} />
-                        <Line type="monotone" dataKey="value" stroke="#4F46E5" strokeWidth={4} dot={{ r: 6, fill: '#4F46E5', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 8, strokeWidth: 0 }} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
+                <div className="px-10 pb-8 flex items-center gap-3">
+                  <button
+                    onClick={() => { setSavedProfile({ ...profile }); setProfileDirty(false); showToast('Profile saved successfully!', 'success') }}
+                    disabled={!profileDirty}
+                    className="px-6 py-3 bg-indigo-600 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest shadow-lg shadow-indigo-100 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-40 disabled:scale-100"
+                  >Save Changes</button>
+                  <button
+                    onClick={() => { if (savedProfile) { setProfile({ ...savedProfile }); setProfileDirty(false) } else { setProfile({ name: 'Divya Dharshini', role: 'Workspace Owner', email: 'divya@salesforce.org', phone: '+91 98765 43210', org: 'Pulsar AI Workspace', region: 'Asia Pacific (IN)' }); setProfileDirty(false) }; showToast('Changes discarded', 'info') }}
+                    className="px-6 py-3 bg-slate-50 text-slate-400 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-100 transition-all"
+                  >Discard</button>
+                  {profileDirty && <span className="text-[9px] font-black text-amber-500 uppercase tracking-widest">● Unsaved changes</span>}
                 </div>
               </div>
-            )}
 
-            {activeNav === 'Revenue' && (
-              <div className="fade-up-1 space-y-6">
-                {/* ── DYNAMIC REVENUE SUMMARY ── */}
-                <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ background: 'linear-gradient(135deg, #10B981, #059669)' }}>
-                    <DollarSign size={24} color="#fff" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-sm font-bold text-gray-900 font-heading mb-1.5 flex items-center gap-2">
-                      Financial Performance Summary
-                      <span className="text-[10px] bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded uppercase tracking-wider">Live Analysis</span>
-                    </h3>
-                    <p className="text-xs text-gray-600 leading-relaxed max-w-4xl">
-                      {(() => {
-                        if (!activeRevenue?.length) return "Awaiting deeper financial synchronization..."
-                        const totalRev = activeRevenue.reduce((s, a) => s + (a.revenue || 0), 0)
-                        const totalTgt = activeRevenue.reduce((s, a) => s + (a.target || 0), 0)
-                        const variance = totalTgt > 0 ? (((totalRev - totalTgt) / totalTgt) * 100).toFixed(1) : "0.0"
-                        const lastMonth = activeRevenue[activeRevenue.length - 1]
-                        const prevMonth = activeRevenue[activeRevenue.length - 2]
-                        const growth = (prevMonth && prevMonth.revenue > 0) ? (((lastMonth.revenue - prevMonth.revenue) / prevMonth.revenue) * 100).toFixed(1) : "0.0"
-
-                        return (
-                          <>
-                            Your live dashboard indicates a total accrued pipeline of <strong className="text-indigo-600">${totalRev.toLocaleString()}</strong> over the active period.
-                            Performance is currently pacing <strong className={parseFloat(variance) >= 0 ? 'text-emerald-600' : 'text-red-500'}>{Math.abs(parseFloat(variance))}% {parseFloat(variance) >= 0 ? 'above' : 'below'}</strong> your set targets.
-                            The most recent month showed a <strong className="text-indigo-600">{growth}%</strong> {parseFloat(growth) >= 0 ? 'increase' : 'decrease'} in revenue generation—continuing this trend would place you at approximately **${(lastMonth.revenue * (1 + (parseFloat(growth) / 100))).toLocaleString(undefined, { maximumFractionDigits: 0 })}** by next month.
-                          </>
-                        )
-                      })()}
-                    </p>
-                  </div>
+              {/* Notification Preferences */}
+              <div className="bg-white rounded-[48px] border border-gray-100 shadow-sm overflow-hidden">
+                <div className="px-10 py-8 border-b border-gray-50 flex items-center justify-between">
+                  <h3 className="font-black text-xl tracking-tight flex items-center gap-3"><BellRing size={22} className="text-indigo-600" /> Notification Preferences</h3>
+                  <button onClick={() => { setNotifPrefs(prev => prev.map(n => ({ ...n, email: true, push: true, slack: true }))); showToast('All notifications enabled', 'success') }} className="text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:underline">Enable All</button>
                 </div>
-
-                <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
-                  <div className="flex items-center justify-between mb-8">
-                    <div>
-                      <h3 className="text-xl font-bold text-gray-900 font-heading">Revenue & Target Overview</h3>
-                      <p className="text-xs text-gray-400 mt-1">Comparative analysis of actuals vs goals</p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full" style={{ background: '#4F46E5' }} />
-                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Actual Revenue</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full border-2 border-dashed border-emerald-500" />
-                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Target Path</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <ResponsiveContainer width="100%" height={400}>
-                    <ComposedChart data={activeRevenue} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="revGradBig" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#4F46E5" stopOpacity={0.25} />
-                          <stop offset="100%" stopColor="#4F46E5" stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" vertical={false} opacity={0.6} />
-                      <XAxis dataKey="month" tick={{ fill: '#9CA3AF', fontSize: 12, fontBold: 600 }} axisLine={false} tickLine={false} dy={10} />
-                      <YAxis tick={{ fill: '#6B7280', fontSize: 12, fontBold: 600 }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} dx={-10} />
-                      <Tooltip content={<CustomTooltip />} />
-                      <Area type="monotone" dataKey="revenue" name="Actual" stroke="#4F46E5" strokeWidth={4} fill="url(#revGradBig)" />
-                      <Line type="monotone" dataKey="target" name="Target" stroke="#10B981" strokeWidth={2} strokeDasharray="6 6" dot={{ r: 4, fill: '#fff', stroke: '#10B981', strokeWidth: 2 }} activeDot={{ r: 6 }} />
-                    </ComposedChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            )}
-
-            {activeNav === 'Customers' && (
-              <div className="fade-up-1">
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                  <div className="px-6 py-6 border-b border-gray-50 flex justify-between items-center bg-[#FAFAFA]">
-                    <div>
-                      <h3 className="text-xl font-bold text-gray-900 font-heading">{connected ? 'Salesforce Leads Directory' : 'Customer Directory'}</h3>
-                      <p className="text-xs text-gray-500 mt-1">Viewing all {filteredRows.length} records</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-2 bg-white rounded-xl px-4 py-2 border border-gray-200">
-                        <SearchIcon size={16} className="text-gray-400" />
-                        <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} placeholder="Search by name or company..." className="bg-transparent outline-none text-sm text-gray-700 w-56" />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="overflow-x-auto min-h-[400px]">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-gray-100 bg-white">
-                          {[['Name & Company', ''], ['Plan/Status', 'plan'], ['Value', 'mrr'], ['Health', 'health'], ['Date Joined', 'joined']].map(([label, col], i) => (
-                            <th key={i} className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-400 whitespace-nowrap">{label}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-50">
-                        {pageRows.map((r, i) => (
-                          <tr key={i} className="hover:bg-indigo-50/20 transition-colors">
-                            <td className="px-6 py-4">
-                              <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white shadow-sm" style={{ background: `hsl(${(i * 47 + 200) % 360}, 70%, 55%)` }}>{r.name.split(' ').map(n => n[0]).join('')}</div>
-                                <div><div className="text-sm font-bold text-gray-900">{r.name}</div><div className="text-[11px] font-medium text-gray-500 uppercase tracking-widest mt-0.5">{r.company}</div></div>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4"><PlanBadge plan={r.plan} /></td>
-                            <td className="px-6 py-4 font-bold text-gray-800">{r.mrr}</td>
-                            <td className="px-6 py-4"><HealthBadge status={r.health} /></td>
-                            <td className="px-6 py-4 text-xs text-gray-500 font-medium">{r.joined}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  <div className="flex justify-between items-center px-6 py-4 bg-[#FAFAFA] border-t border-gray-100">
-                    <span className="text-xs text-gray-500 font-semibold tracking-wide">PAGE {page} OF {totalPages}</span>
-                    <div className="flex gap-2">
-                      <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-4 py-2 hover:bg-gray-100 bg-white border border-gray-200 rounded-lg text-xs font-bold text-gray-700 transition-colors disabled:opacity-30">Previous</button>
-                      <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-4 py-2 hover:bg-gray-100 bg-white border border-gray-200 rounded-lg text-xs font-bold text-gray-700 transition-colors disabled:opacity-30">Next</button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeNav === 'Campaigns' && <Campaigns isConnected={connected} leads={leadsToUse} />}
-            {activeNav === 'Integrations' && <Integrations isConnected={connected} onConnectSF={() => setShowModal(true)} />}
-            {activeNav === 'Team' && <Team />}
-
-            {/* Salesforce Cloud Placeholders & Live Views */}
-            {['Opportunities', 'Accounts', 'Contacts', 'Calendar', 'Tasks', 'Files', 'Groups', 'Reports', 'Settings'].includes(activeNav) && (
-              <div className="h-full flex flex-col fade-up-1">
-                {activeNav === 'Reports' ? (
-                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden m-6">
-                    <div className="px-6 py-6 border-b border-gray-50 flex justify-between items-center bg-[#FAFAFA]">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-2xl bg-indigo-600 shadow-lg shadow-indigo-200 flex items-center justify-center text-white transition-transform hover:scale-110">
-                          <BarChart3 size={24} />
-                        </div>
-                        <div>
-                          <h3 className="text-xl font-bold text-gray-900 font-heading radiant-text">Salesforce Reports</h3>
-                          <p className="text-xs text-gray-500 mt-1 font-medium">Live from your Salesforce Analytics engine</p>
-                        </div>
-                      </div>
-                      <button onClick={fetchReports} className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-xs font-bold hover:bg-indigo-100 transition-all border border-indigo-100">
-                        <RefreshCw size={14} className={reportsLoading ? 'animate-spin' : ''} />
-                        Refresh List
-                      </button>
-                    </div>
-                    <div className="overflow-x-auto min-h-[400px]">
-                      {reportsLoading ? (
-                        <div className="flex flex-col items-center justify-center p-20 gap-3">
-                          <Bot size={40} className="text-indigo-400 animate-bounce" />
-                          <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">Fetching Report Metadata...</p>
-                        </div>
-                      ) : sfReports.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center p-20 gap-3">
-                          <PieChart size={40} className="text-gray-200" />
-                          <p className="text-sm font-bold text-gray-400">No recent reports found.</p>
-                        </div>
-                      ) : (
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="border-b border-gray-100 bg-white">
-                              {['Report Name', 'Format', 'Last Run Date'].map((label, i) => (
-                                <th key={i} className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-400">{label}</th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-50">
-                            {sfReports.map((r, i) => (
-                              <tr key={i} className="hover:bg-indigo-50/20 transition-colors cursor-pointer group">
-                                <td className="px-6 py-4">
-                                  <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 group-hover:scale-110 transition-transform">
-                                      <PieChart size={14} />
-                                    </div>
-                                    <span className="font-bold text-gray-900">{r.Name}</span>
-                                  </div>
-                                </td>
-                                <td className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">{r.Format}</td>
-                                <td className="px-6 py-4 text-xs text-gray-400">{new Date(r.LastRunDate).toLocaleString()}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      )}
-                    </div>
-                  </div>
-                ) : activeNav === 'Opportunities' ? (
-                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden m-6">
-                    <div className="px-6 py-6 border-b border-gray-50 flex justify-between items-center bg-[#FAFAFA]">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-2xl bg-emerald-600 shadow-lg shadow-emerald-200 flex items-center justify-center text-white transition-transform hover:scale-110">
-                          <Briefcase size={24} />
-                        </div>
-                        <div>
-                          <h3 className="text-xl font-bold text-gray-900 font-heading radiant-text">Salesforce Opportunities</h3>
-                          <p className="text-xs text-gray-500 mt-1 font-medium">Your live sales pipeline from Salesforce CRM</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-2 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100 uppercase tracking-tight">
-                          {oppsLoading ? <RefreshCw size={10} className="animate-spin" /> : <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full" />}
-                          {oppsLoading ? 'SYNCING...' : `LAST SYNCED ${lastSync}`}
-                        </div>
-                        <button onClick={fetchOpportunities} className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-600 rounded-xl text-xs font-bold hover:bg-emerald-100 transition-all border border-emerald-100">
-                          <RefreshCw size={14} className={oppsLoading ? 'animate-spin' : ''} />
-                          Sync Pipeline
-                        </button>
-                      </div>
-                    </div>
-                    <div className="overflow-x-auto min-h-[400px]">
-                      {oppsLoading ? (
-                        <div className="flex flex-col items-center justify-center p-20 gap-3">
-                          <Bot size={40} className="text-emerald-400 animate-bounce" />
-                          <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">Hydrating Opportunities...</p>
-                        </div>
-                      ) : sfOpportunities.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center p-20 gap-3 text-center">
-                          <Briefcase size={40} className="text-gray-200 mb-2" />
-                          <p className="text-sm font-bold text-gray-500 mb-1">No active opportunities found.</p>
-                          <p className="text-xs text-gray-400">Try creating one using the AI chatbot or "Quick Actions"!</p>
-                        </div>
-                      ) : (
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="border-b border-gray-100 bg-white">
-                              {['Opportunity Name', 'Amount', 'Stage', 'Close Date'].map((label, i) => (
-                                <th key={i} className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-400">{label}</th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-50">
-                            {sfOpportunities.map((opp, i) => (
-                              <tr key={opp.Id} className="hover:bg-emerald-50/20 transition-colors group">
-                                <td className="px-6 py-4">
-                                  <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600 group-hover:scale-110 transition-transform">
-                                      <TrendingUp size={14} />
-                                    </div>
-                                    <span className="font-bold text-gray-900">{opp.Name}</span>
-                                  </div>
-                                </td>
-                                <td className="px-6 py-4">
-                                  <span className="font-bold text-gray-800">${(opp.Amount || 0).toLocaleString()}</span>
-                                </td>
-                                <td className="px-6 py-4">
-                                  <StageBadge stage={opp.StageName} />
-                                </td>
-                                <td className="px-6 py-4 text-xs font-medium text-gray-500">
-                                  {new Date(opp.CloseDate).toLocaleDateString()}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      )}
-                    </div>
-                  </div>
-                ) : activeNav === 'Accounts' ? (
-                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden m-6 flex-1 flex flex-col">
-                    <div className="px-6 py-6 border-b border-gray-50 flex justify-between items-center bg-[#FAFAFA]">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-2xl bg-sky-600 shadow-lg shadow-sky-200 flex items-center justify-center text-white transition-transform hover:scale-110">
-                          <Building2 size={24} />
-                        </div>
-                        <div>
-                          <h3 className="text-xl font-bold text-gray-900 font-heading radiant-text">Corporate Accounts</h3>
-                          <p className="text-xs text-gray-500 mt-1 font-medium">Global enterprise and partner organizations</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-2 text-[10px] font-bold text-sky-600 bg-sky-50 px-3 py-1.5 rounded-lg border border-sky-100 uppercase tracking-tight">
-                          {accLoading ? <RefreshCw size={10} className="animate-spin" /> : <div className="w-1.5 h-1.5 bg-sky-400 rounded-full" />}
-                          {accLoading ? 'SYNCING...' : `LAST SYNCED ${lastSync}`}
-                        </div>
-                        <button onClick={fetchAccounts} className="flex items-center gap-2 px-4 py-2 bg-sky-50 text-sky-600 rounded-xl text-xs font-bold hover:bg-sky-100 transition-all border border-sky-100">
-                          <RefreshCw size={14} className={accLoading ? 'animate-spin' : ''} />
-                          Sync Accounts
-                        </button>
-                      </div>
-                    </div>
-                    <div className="overflow-x-auto flex-1">
-                      {accLoading ? (
-                        <div className="flex flex-col items-center justify-center p-20 gap-3">
-                          <Bot size={40} className="text-sky-400 animate-bounce" />
-                          <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">Querying Account Metadata...</p>
-                        </div>
-                      ) : sfAccounts.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center p-20 gap-3 text-center">
-                          <Building2 size={40} className="text-gray-200 mb-2" />
-                          <p className="text-sm font-bold text-gray-500 mb-1">No Accounts found.</p>
-                          <p className="text-xs text-gray-400">Try creating one using the AI agent!</p>
-                        </div>
-                      ) : (
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="border-b border-gray-100 bg-white sticky top-0 z-10">
-                              {['Account Name', 'Industry', 'Website', 'Phone'].map((label, i) => (
-                                <th key={i} className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-400">{label}</th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-50">
-                            {sfAccounts.map((acc, i) => (
-                              <tr key={acc.Id} className="hover:bg-sky-50/20 transition-colors group">
-                                <td className="px-6 py-4">
-                                  <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-lg bg-sky-50 flex items-center justify-center text-sky-600 group-hover:rotate-12 transition-transform">
-                                      <Building2 size={14} />
-                                    </div>
-                                    <span className="font-bold text-gray-900">{acc.Name}</span>
-                                  </div>
-                                </td>
-                                <td className="px-6 py-4"><span className="text-xs font-semibold text-gray-500 uppercase">{acc.Industry || '—'}</span></td>
-                                <td className="px-6 py-4"><a href={acc.Website} target="_blank" className="text-xs font-medium text-sky-600 hover:underline">{acc.Website || '—'}</a></td>
-                                <td className="px-6 py-4 text-xs font-medium text-gray-500">{acc.Phone || '—'}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      )}
-                    </div>
-                  </div>
-                ) : activeNav === 'Contacts' ? (
-                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden m-6 flex-1 flex flex-col">
-                    <div className="px-6 py-6 border-b border-gray-50 flex justify-between items-center bg-[#FAFAFA]">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-2xl bg-rose-600 shadow-lg shadow-rose-200 flex items-center justify-center text-white transition-transform hover:scale-110">
-                          <Contact size={24} />
-                        </div>
-                        <div>
-                          <h3 className="text-xl font-bold text-gray-900 font-heading radiant-text">Professional Contacts</h3>
-                          <p className="text-xs text-gray-500 mt-1 font-medium">Managing your key stakeholder relationships</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-2 text-[10px] font-bold text-rose-600 bg-rose-50 px-3 py-1.5 rounded-lg border border-rose-100 uppercase tracking-tight">
-                          {contLoading ? <RefreshCw size={10} className="animate-spin" /> : <div className="w-1.5 h-1.5 bg-rose-400 rounded-full" />}
-                          {contLoading ? 'SYNCING...' : `LAST SYNCED ${lastSync}`}
-                        </div>
-                        <button onClick={fetchContacts} className="flex items-center gap-2 px-4 py-2 bg-rose-50 text-rose-600 rounded-xl text-xs font-bold hover:bg-rose-100 transition-all border border-rose-100">
-                          <RefreshCw size={14} className={contLoading ? 'animate-spin' : ''} />
-                          Sync Contacts
-                        </button>
-                      </div>
-                    </div>
-                    <div className="overflow-x-auto flex-1">
-                      {contLoading ? (
-                        <div className="flex flex-col items-center justify-center p-20 gap-3">
-                          <Bot size={40} className="text-rose-400 animate-bounce" />
-                          <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">Hydrating Relationship Data...</p>
-                        </div>
-                      ) : sfContacts.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center p-20 gap-3 text-center">
-                          <Contact size={40} className="text-gray-200 mb-2" />
-                          <p className="text-sm font-bold text-gray-500 mb-1">No contacts found.</p>
-                        </div>
-                      ) : (
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="border-b border-gray-100 bg-white sticky top-0 z-10">
-                              {['Contact Name', 'Account', 'Email', 'Phone'].map((label, i) => (
-                                <th key={i} className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-400">{label}</th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-50">
-                            {sfContacts.map((c, i) => (
-                              <tr key={c.Id} className="hover:bg-rose-50/20 transition-colors group">
-                                <td className="px-6 py-4">
-                                  <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-lg bg-rose-50 flex items-center justify-center text-rose-600 group-hover:scale-110 transition-transform">
-                                      <Contact size={14} />
-                                    </div>
-                                    <span className="font-bold text-gray-900">{c.Name}</span>
-                                  </div>
-                                </td>
-                                <td className="px-6 py-4 font-semibold text-gray-700">{c.Account?.Name || '—'}</td>
-                                <td className="px-6 py-4 text-xs font-medium text-rose-600 hover:scale-105 transition-transform">{c.Email || '—'}</td>
-                                <td className="px-6 py-4 text-xs font-medium text-gray-500">{c.Phone || '—'}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      )}
-                    </div>
-                  </div>
-                ) : activeNav === 'Tasks' ? (
-                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden m-6 flex-1 flex flex-col">
-                    <div className="px-6 py-6 border-b border-gray-50 flex justify-between items-center bg-[#FAFAFA]">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-2xl bg-amber-600 shadow-lg shadow-amber-200 flex items-center justify-center text-white transition-transform hover:scale-110">
-                          <ClipboardList size={24} />
-                        </div>
-                        <div>
-                          <h3 className="text-xl font-bold text-gray-900 font-heading radiant-text">Daily Tasks</h3>
-                          <p className="text-xs text-gray-500 mt-1 font-medium">Critical items requiring your attention</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-2 text-[10px] font-bold text-amber-600 bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-100 uppercase tracking-tight">
-                          {taskLoading ? <RefreshCw size={10} className="animate-spin" /> : <div className="w-1.5 h-1.5 bg-amber-400 rounded-full" />}
-                          {taskLoading ? 'SYNCING...' : `LAST SYNCED ${lastSync}`}
-                        </div>
-                        <button onClick={fetchTasks} className="flex items-center gap-2 px-4 py-2 bg-amber-50 text-amber-600 rounded-xl text-xs font-bold hover:bg-amber-100 transition-all border border-amber-100">
-                          <RefreshCw size={14} className={taskLoading ? 'animate-spin' : ''} />
-                          Sync Tasks
-                        </button>
-                      </div>
-                    </div>
-                    <div className="overflow-x-auto flex-1 p-6 space-y-4">
-                      {taskLoading ? (
-                        <div className="flex flex-col items-center justify-center p-20 gap-3">
-                          <Bot size={40} className="text-amber-400 animate-bounce" />
-                          <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">Loading Task Queue...</p>
-                        </div>
-                      ) : sfTasks.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center p-20 gap-3 text-center">
-                          <ClipboardList size={40} className="text-gray-200 mb-2" />
-                          <p className="text-sm font-bold text-gray-500 mb-1">Clear schedule! No tasks found.</p>
-                        </div>
-                      ) : (
-                        <div className="grid grid-cols-1 gap-3">
-                          {sfTasks.map(task => (
-                            <div key={task.Id} className="p-4 bg-gray-50 rounded-2xl border border-gray-100 flex items-center justify-between hover:bg-white hover:shadow-lg hover:shadow-amber-100/50 transition-all group">
-                              <div className="flex items-center gap-4">
-                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${task.Priority === 'High' ? 'bg-red-50 text-red-600' : 'bg-gray-100 text-gray-500'}`}>
-                                  {task.Status === 'Completed' ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
-                                </div>
-                                <div className="space-y-0.5">
-                                  <div className="text-sm font-bold text-gray-900">{task.Subject}</div>
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{task.Status}</span>
-                                    <span className="text-[10px] text-gray-300">•</span>
-                                    <span className={`text-[10px] font-bold uppercase tracking-widest ${task.Priority === 'High' ? 'text-red-500' : 'text-amber-600'}`}>{task.Priority} Priority</span>
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="text-right">
-                                <div className="text-[10px] font-bold text-gray-400 uppercase">Due Date</div>
-                                <div className="text-xs font-bold text-gray-700">{task.ActivityDate ? new Date(task.ActivityDate).toLocaleDateString() : 'No Date'}</div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ) : activeNav === 'Calendar' ? (
-                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden m-6 flex-1 flex flex-col">
-                    <div className="px-6 py-6 border-b border-gray-50 flex justify-between items-center bg-[#FAFAFA]">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-2xl bg-blue-600 shadow-lg shadow-blue-200 flex items-center justify-center text-white transition-transform hover:scale-110">
-                          <CalendarIcon size={24} />
-                        </div>
-                        <div>
-                          <h3 className="text-xl font-bold text-gray-900 font-heading radiant-text">Corporate Agenda</h3>
-                          <p className="text-xs text-gray-500 mt-1 font-medium">Synchronized Salesforce Events & Meetings</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-2 text-[10px] font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100 uppercase tracking-tight">
-                          {eventLoading ? <RefreshCw size={10} className="animate-spin" /> : <div className="w-1.5 h-1.5 bg-blue-400 rounded-full" />}
-                          {eventLoading ? 'SYNCING...' : `LAST SYNCED ${lastSync}`}
-                        </div>
-                        <button onClick={fetchEvents} className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-xl text-xs font-bold hover:bg-blue-100 transition-all border border-blue-100">
-                          <RefreshCw size={14} className={eventLoading ? 'animate-spin' : ''} />
-                          Sync Agenda
-                        </button>
-                      </div>
-                    </div>
-                    <div className="overflow-x-auto flex-1 p-6">
-                      {eventLoading ? (
-                        <div className="flex flex-col items-center justify-center p-20 gap-3">
-                          <Bot size={40} className="text-blue-400 animate-bounce" />
-                          <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">Polling Calendar Service...</p>
-                        </div>
-                      ) : sfEvents.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center p-20 gap-3 text-center">
-                          <CalendarIcon size={40} className="text-gray-200 mb-2" />
-                          <p className="text-sm font-bold text-gray-500 mb-1">No upcoming events scheduled.</p>
-                        </div>
-                      ) : (
-                        <div className="space-y-4">
-                          {sfEvents.map(ev => (
-                            <div key={ev.Id} className="flex gap-4 group">
-                              <div className="w-16 text-right pt-1">
-                                <div className="text-xs font-bold text-gray-900">{new Date(ev.StartDateTime).toLocaleDateString('en', { day: '2-digit', month: 'short' })}</div>
-                                <div className="text-[10px] text-gray-400 font-medium">{new Date(ev.StartDateTime).toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' })}</div>
-                              </div>
-                              <div className="w-0.5 bg-blue-100 relative group-hover:bg-blue-400 transition-colors">
-                                <div className="absolute top-2 -left-1 w-2.5 h-2.5 rounded-full bg-blue-500 ring-4 ring-white" />
-                              </div>
-                              <div className="flex-1 pb-6 border-b border-gray-50 last:border-0">
-                                <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 hover:bg-white hover:shadow-xl hover:shadow-blue-50 group-hover:border-blue-100 transition-all">
-                                  <div className="text-sm font-bold text-gray-900 mb-1">{ev.Subject}</div>
-                                  <div className="flex items-center gap-4 text-[11px] text-gray-500 font-medium">
-                                    <div className="flex items-center gap-1.5"><Clock size={12} /> {new Date(ev.StartDateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(ev.EndDateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-                                    {ev.Location && <div className="flex items-center gap-1.5"><Globe size={12} /> {ev.Location}</div>}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ) : activeNav === 'Groups' ? (
-                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden m-6 flex-1 flex flex-col">
-                    <div className="px-6 py-6 border-b border-gray-50 flex justify-between items-center bg-[#FAFAFA]">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-2xl bg-purple-600 shadow-lg shadow-purple-200 flex items-center justify-center text-white transition-transform hover:scale-110">
-                          <Users2 size={24} />
-                        </div>
-                        <div>
-                          <h3 className="text-xl font-bold text-gray-900 font-heading radiant-text">Chatter Groups</h3>
-                          <p className="text-xs text-gray-500 mt-1 font-medium">Salesforce collaboration & department hubs</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-2 text-[10px] font-bold text-purple-600 bg-purple-50 px-3 py-1.5 rounded-lg border border-purple-100 uppercase tracking-tight">
-                          {groupLoading ? <RefreshCw size={10} className="animate-spin" /> : <div className="w-1.5 h-1.5 bg-purple-400 rounded-full" />}
-                          {groupLoading ? 'SYNCING...' : `LAST SYNCED ${lastSync}`}
-                        </div>
-                        <button onClick={fetchGroups} className="flex items-center gap-2 px-4 py-2 bg-purple-50 text-purple-600 rounded-xl text-xs font-bold hover:bg-purple-100 transition-all border border-purple-100">
-                          <RefreshCw size={14} className={groupLoading ? 'animate-spin' : ''} />
-                          Sync Groups
-                        </button>
-                      </div>
-                    </div>
-                    <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4 flex-1 overflow-y-auto">
-                      {groupLoading ? (
-                        <div className="col-span-2 flex flex-col items-center justify-center p-20 gap-3">
-                          <Bot size={40} className="text-purple-400 animate-bounce" />
-                          <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">Fetching Collaboration Spaces...</p>
-                        </div>
-                      ) : sfGroups.length === 0 ? (
-                        <div className="col-span-2 flex flex-col items-center justify-center p-20 gap-3 text-center">
-                          <Users2 size={40} className="text-gray-200 mb-2" />
-                          <p className="text-sm font-bold text-gray-500 mb-1">No Groups found.</p>
-                        </div>
-                      ) : (
-                        sfGroups.map(g => (
-                          <div key={g.Id} className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm hover:shadow-xl hover:scale-[1.02] transition-all group">
-                            <div className="flex justify-between items-start mb-4">
-                              <div className="w-12 h-12 rounded-2xl bg-purple-50 flex items-center justify-center text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-all">
-                                <Users2 size={20} />
-                              </div>
-                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${g.CollaborationType === 'Public' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>{g.CollaborationType}</span>
-                            </div>
-                            <h4 className="text-sm font-bold text-gray-900 mb-1">{g.Name}</h4>
-                            <p className="text-xs text-gray-500 line-clamp-2 h-8 mb-4">{g.Description || 'No description provided for this collaboration group.'}</p>
-                            <button className="w-full py-2 bg-gray-50 rounded-xl text-[10px] font-bold text-gray-600 hover:bg-purple-600 hover:text-white transition-all">View Group Feed</button>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                ) : activeNav === 'Settings' ? (
-                  <div className="flex-1 flex flex-col m-6 overflow-hidden">
-                    <div className="mb-6">
-                      <h2 className="text-3xl font-extrabold text-gray-900 font-heading radiant-text">Platform Settings</h2>
-                      <p className="text-sm text-gray-500 font-medium">Manage your Pulsar AI workspace and Salesforce synchronization</p>
-                    </div>
-
-                    <div className="flex-1 bg-white rounded-[32px] shadow-2xl shadow-indigo-100/50 border border-indigo-50/50 overflow-hidden flex">
-                      {/* Sub-sidebar */}
-                      <div className="w-64 bg-indigo-50/10 border-r border-indigo-50/50 p-6 flex flex-col gap-2">
-                        {[
-                          { id: 'Profile', icon: User, label: 'Profile' },
-                          { id: 'Salesforce', icon: Database, label: 'Salesforce Hub' },
-                          { id: 'Appearance', icon: Palette, label: 'Appearance' },
-                          { id: 'Notifications', icon: BellRing, label: 'Notifications' },
-                        ].map(tab => (
-                          <button key={tab.id} onClick={() => setSettingsTab(tab.id)}
-                            className={`settings-tab-btn ${settingsTab === tab.id ? 'settings-tab-active' : ''}`}>
-                            <tab.icon size={18} strokeWidth={2.5} />
-                            {tab.label}
-                          </button>
-                        ))}
-                        <div className="mt-auto p-5 bg-gradient-to-br from-indigo-600 to-violet-700 rounded-3xl border border-indigo-400/30 shadow-lg shadow-indigo-200/50">
-                          <p className="text-[10px] font-bold text-indigo-100 uppercase mb-1 tracking-widest">Pulsar AI Pro</p>
-                          <p className="text-[9px] text-white/80 font-bold">Session Active: {connected ? 'PRO' : 'GUEST'}</p>
-                          <div className="mt-3 w-full h-1 bg-white/20 rounded-full overflow-hidden">
-                            <div className="h-full bg-emerald-400 rounded-full" style={{ width: '85%' }} />
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Content Area */}
-                      <div className="flex-1 overflow-y-auto p-12 bg-white/40 backdrop-blur-sm">
-                        {settingsTab === 'Profile' && (
-                          <div className="animate-fade-in max-w-2xl">
-                            <h3 className="text-2xl font-extrabold text-gray-900 mb-8 font-heading">User Profile</h3>
-                            <div className="flex items-center gap-8 mb-12">
-                                <div className="w-28 h-28 rounded-[40px] bg-gradient-to-tr from-indigo-500 to-violet-600 flex items-center justify-center text-4xl font-bold text-white shadow-2xl relative group cursor-pointer border-4 border-white ring-1 ring-indigo-50">
-                                  DD
-                                  <div className="absolute inset-0 bg-indigo-600/40 rounded-[40px] opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center text-xs font-bold backdrop-blur-sm">Change</div>
-                                </div>
-                              <div>
-                                <h4 className="text-xl font-bold text-gray-900">Divya Dharshini</h4>
-                                <p className="text-sm text-indigo-500 font-semibold mb-3">Workspace Owner · Pulsar Enterprise</p>
-                                <button className="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-xs font-bold hover:bg-indigo-600 hover:text-white transition-all border border-indigo-100 shadow-sm">Change Profile Picture</button>
-                              </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-8">
-                              <div className="space-y-2">
-                                <label className="modern-label">First Name</label>
-                                <input className="modern-input" defaultValue="Divya" />
-                              </div>
-                              <div className="space-y-2">
-                                <label className="modern-label">Last Name</label>
-                                <input className="modern-input" defaultValue="Dharshini" />
-                              </div>
-                              <div className="col-span-2 space-y-2">
-                                <label className="modern-label">Email Address</label>
-                                <input className="modern-input" defaultValue="divya@pulsar.ai" />
-                              </div>
-                              <div className="col-span-2 pt-4">
-                                <button className="px-8 py-3 bg-indigo-600 text-white rounded-2xl text-sm font-bold shadow-xl shadow-indigo-200 hover:bg-indigo-700 transition-all">Save Changes</button>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {settingsTab === 'Salesforce' && (
-                          <div className="animate-fade-in max-w-2xl">
-                            <h3 className="text-2xl font-extrabold text-gray-900 mb-8 font-heading">Salesforce Infrastructure</h3>
-                            <div className="p-8 bg-gradient-to-br from-indigo-600 via-indigo-800 to-violet-900 rounded-[32px] text-white mb-12 relative overflow-hidden shadow-2xl border border-white/10">
-                              <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 blur-[100px]" />
-                              <div className="flex justify-between items-start relative z-10">
-                                <div>
-                                  <div className="flex items-center gap-2 mb-3">
-                                    <span className={`w-2.5 h-2.5 rounded-full ${connected ? 'bg-emerald-400 pulse-ring' : 'bg-red-400'}`} />
-                                    <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-300">{connected ? 'System Online' : 'System Offline'}</span>
-                                  </div>
-                                  <h4 className="text-3xl font-black tracking-tight mb-2">Salesforce Production</h4>
-                                  <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-3 py-1 rounded-full w-fit">
-                                    <Globe size={10} className="text-indigo-400" />
-                                    <p className="text-[10px] text-indigo-100/60 font-bold uppercase tracking-widest">Instance.na214.salesforce.com</p>
-                                  </div>
-                                </div>
-                                <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center border border-white/10">
-                                  <Cloud size={32} className="text-indigo-400" />
-                                </div>
-                              </div>
-                              <div className="mt-8 flex gap-4 relative z-10">
-                                <button onClick={() => setShowModal(true)} className="px-6 py-2.5 bg-white text-indigo-950 rounded-xl text-xs font-bold hover:bg-indigo-50 transition-all shadow-lg active:scale-95">Re-Authenticate Hub</button>
-                                <button className="px-6 py-2.5 bg-white/5 border border-white/10 text-white rounded-xl text-xs font-bold hover:bg-white/10 transition-all active:scale-95">Download Integration Logs</button>
-                              </div>
-                            </div>
-
-                            <div className="space-y-10">
-                              <div className="glass-settings-card border-indigo-100/50">
-                                <div className="flex justify-between items-end mb-6">
-                                  <div>
-                                    <h4 className="text-sm font-bold text-gray-900">Background Sync Heartbeat</h4>
-                                    <p className="text-xs text-gray-500 mt-1">Adjust how often Pulsar AI polls your Salesforce CRM.</p>
-                                  </div>
-                                  <div className="text-2xl font-black text-indigo-600 font-heading">{syncIntensity}s</div>
-                                </div>
-                                <input type="range" min="10" max="300" step="10"
-                                  value={syncIntensity} onChange={e => setSyncIntensity(parseInt(e.target.value))}
-                                  className="w-full h-2 bg-indigo-50 rounded-lg appearance-none cursor-pointer accent-indigo-600 mb-3" />
-                                <div className="flex justify-between text-[10px] font-black text-indigo-300 uppercase tracking-widest">
-                                  <span>Fast (Real-time)</span>
-                                  <span>Steady (Optimized)</span>
-                                </div>
-                              </div>
-
-                              <div className="flex items-center justify-between p-8 bg-indigo-50/30 rounded-[28px] border border-indigo-100 transition-all hover:bg-white hover:shadow-xl hover:shadow-indigo-100/20">
-                                <div className="flex items-center gap-4">
-                                  <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-indigo-600 shadow-sm border border-indigo-50">
-                                    <Zap size={20} />
-                                  </div>
-                                  <div>
-                                    <h4 className="text-sm font-bold text-gray-900">Auto-Detect High Value Leads</h4>
-                                    <p className="text-xs text-gray-500 mt-1">Automatically prioritize hot leads in the overview.</p>
-                                  </div>
-                                </div>
-                                <label className="premium-switch">
-                                  <input type="checkbox" defaultChecked />
-                                  <span className="switch-slider"></span>
-                                </label>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {settingsTab === 'Appearance' && (
-                          <div className="animate-fade-in max-w-2xl">
-                            <h3 className="text-2xl font-extrabold text-gray-900 mb-8 font-heading">System Appearance</h3>
-
-                            <div className="mb-12 glass-settings-card">
-                              <label className="modern-label mb-6">Color Mode Experience</label>
-                              <div className="segmented-control max-w-sm">
-                                <button onClick={() => setDarkMode(false)} className={`segmented-btn ${!darkMode ? 'segmented-btn-active' : ''}`}>
-                                  <div className="flex items-center justify-center gap-2">
-                                    <Sun size={14} /> Light Hub
-                                  </div>
-                                </button>
-                                <button onClick={() => setDarkMode(true)} className={`segmented-btn ${darkMode ? 'segmented-btn-active' : ''}`}>
-                                  <div className="flex items-center justify-center gap-2">
-                                    <Moon size={14} /> Dark Radiant
-                                  </div>
-                                </button>
-                              </div>
-                              <div className="flex items-center gap-2 mt-4 text-[10px] bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-xl w-fit font-bold uppercase tracking-widest">
-                                <Sparkles size={12} /> Dark mode is a visual simulation in this version
-                              </div>
-                            </div>
-
-                            <div className="glass-settings-card">
-                              <label className="modern-label mb-6">Accent Palette Selection</label>
-                              <div className="flex flex-wrap gap-5">
-                                {[
-                                  { color: '#4F46E5', name: 'Pulsar Indigo' },
-                                  { color: '#10B981', name: 'Emerald' },
-                                  { color: '#F59E0B', name: 'Amber' },
-                                  { color: '#EF4444', name: 'Ruby' },
-                                  { color: '#EC4899', name: 'Pink' },
-                                  { color: '#06B6D4', name: 'Cyan' }
-                                ].map(item => (
-                                  <div key={item.color} className="flex flex-col items-center gap-2 group cursor-pointer">
-                                    <button className="w-14 h-14 rounded-[20px] shadow-lg border-4 border-white ring-1 ring-indigo-50 transition-all group-hover:scale-110 active:scale-95 group-hover:shadow-indigo-200" style={{ background: item.color }} />
-                                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">{item.name}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {settingsTab === 'Notifications' && (
-                          <div className="animate-fade-in max-w-2xl">
-                            <h3 className="text-2xl font-extrabold text-gray-900 mb-8 font-heading">Connectivity & Sync Alerts</h3>
-                            <div className="space-y-5">
-                              {[
-                                { title: 'AI Operational Updates', desc: 'Allow the AI agent to speak important sync statuses.', icon: Mic2, color: 'text-indigo-600', bg: 'bg-indigo-50' },
-                                { title: 'Critical Session Failures', desc: 'Immediate alerts if Salesforce OAuth session expires.', icon: ShieldAlert, color: 'text-red-600', bg: 'bg-red-50' },
-                                { title: 'Hot Lead Acquisition', desc: 'Notification when AI scores a lead above 90.', icon: Flame, color: 'text-orange-600', bg: 'bg-orange-50' },
-                                { title: 'Executive Summary Emails', desc: 'Weekly PDF reports sent to your primary inbox.', icon: Mail, color: 'text-sky-600', bg: 'bg-sky-50' },
-                              ].map((n, i) => (
-                                <div key={i} className="flex items-center justify-between p-8 bg-white rounded-[32px] border border-gray-100 hover:border-indigo-200 hover:shadow-2xl hover:shadow-indigo-100/20 transition-all group">
-                                  <div className="flex items-center gap-5">
-                                    <div className={`w-14 h-14 ${n.bg} rounded-2xl flex items-center justify-center ${n.color} transition-transform group-hover:scale-110 group-hover:rotate-6`}>
-                                      <n.icon size={24} />
-                                    </div>
-                                    <div>
-                                      <h4 className="text-base font-bold text-gray-900">{n.title}</h4>
-                                      <p className="text-sm text-gray-500 mt-0.5">{n.desc}</p>
-                                    </div>
-                                  </div>
-                                  <label className="premium-switch shadow-sm scale-110">
-                                    <input type="checkbox" defaultChecked={i < 2} />
-                                    <span className="switch-slider"></span>
-                                  </label>
-                                </div>
-                              ))}
-                            </div>
-                            <div className="mt-10 p-6 bg-indigo-900 rounded-[32px] text-white flex items-center justify-between shadow-2xl shadow-indigo-200">
-                               <div className="flex items-center gap-4">
-                                  <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center border border-white/20">
-                                    <BellRing size={20} className="text-white" />
-                                  </div>
-                                  <div>
-                                    <h4 className="text-sm font-bold">Push Notifications Active</h4>
-                                    <p className="text-xs text-white/60">System-wide operational tracking is live.</p>
-                                  </div>
-                               </div>
-                               <button className="px-5 py-2 bg-white text-indigo-900 rounded-xl text-xs font-bold hover:bg-indigo-50 transition-all">Test Notification</button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden m-6 flex-1 flex flex-col">
-                    <div className="px-6 py-6 border-b border-gray-50 flex justify-between items-center bg-[#FAFAFA]">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-2xl bg-indigo-600 shadow-lg shadow-indigo-200 flex items-center justify-center text-white transition-transform hover:scale-110">
-                          <FileText size={24} />
-                        </div>
-                        <div>
-                          <h3 className="text-xl font-bold text-gray-900 font-heading radiant-text">Cloud Resource Vault</h3>
-                          <p className="text-xs text-gray-500 mt-1 font-medium">Synchronized Salesforce Documents & Assets</p>
-                        </div>
+                <div className="px-10 py-8 divide-y divide-gray-50">
+                  {notifPrefs.map((n, i) => (
+                    <div key={i} className="py-5 flex items-center justify-between">
+                      <div>
+                        <div className="font-black text-[14px] text-slate-800">{n.title}</div>
+                        <div className="text-[10px] font-bold text-slate-400 mt-0.5">{n.desc}</div>
                       </div>
                       <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2 text-[10px] font-bold text-indigo-600 bg-indigo-50/50 px-3 py-1.5 rounded-lg border border-indigo-100 uppercase tracking-tight">
-                          {isSyncing ? <RefreshCw size={10} className="animate-spin" /> : <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full" />}
-                          {isSyncing ? 'SYNCING...' : `LAST SYNCED ${lastSync}`}
-                        </div>
-                        <button onClick={() => sendMessage('upload a file')} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 transition-all border border-indigo-700 shadow-md">
-                          <Upload size={14} />
-                          Upload New
-                        </button>
+                        {([['Email', 'email'], ['Push', 'push'], ['Slack', 'slack']]).map(([label, key]) => (
+                          <div key={key} className="flex flex-col items-center gap-1.5">
+                            <button
+                              onClick={() => {
+                                setNotifPrefs(prev => prev.map((item, idx) => idx === i ? { ...item, [key]: !item[key] } : item))
+                                showToast(`${n.title} ${label} ${!n[key] ? 'enabled' : 'disabled'}`, 'info')
+                              }}
+                              className={`w-10 h-5 rounded-full border transition-all relative ${n[key] ? 'bg-indigo-600 border-indigo-600' : 'bg-slate-100 border-slate-200'}`}
+                            >
+                              <div className={`w-4 h-4 rounded-full bg-white shadow-sm absolute top-0.5 transition-all ${n[key] ? 'left-5' : 'left-0.5'}`} />
+                            </button>
+                            <span className="text-[8px] font-black text-slate-300 uppercase">{label}</span>
+                          </div>
+                        ))}
                       </div>
                     </div>
-                    <div className="flex-1 flex flex-col items-center justify-center p-12 text-center group">
-                      <div className="w-24 h-24 rounded-3xl bg-indigo-50 flex items-center justify-center mb-6 group-hover:scale-110 group-hover:rotate-6 transition-all shadow-inner">
-                        <FileText size={40} className="text-indigo-600" />
-                      </div>
-                      <h2 className="text-2xl font-bold text-gray-900 mb-2">Vault Operational</h2>
-                      <p className="text-gray-500 max-w-sm mb-8">Securely managing your Salesforce document infrastructure. You can view, download, and upload assets directly from this console.</p>
+                  ))}
+                </div>
+              </div>
 
-                      <div className="grid grid-cols-2 gap-4 w-full max-w-lg">
-                        <div className="p-6 bg-gray-50 rounded-3xl border border-gray-100 text-left hover:bg-white hover:shadow-xl transition-all">
-                          <BookOpen size={20} className="text-blue-500 mb-3" />
-                          <div className="text-sm font-bold text-gray-900">Contracts & NDAs</div>
-                          <div className="text-[10px] text-gray-400 font-bold uppercase mt-1">42 Synchronized</div>
-                        </div>
-                        <div className="p-6 bg-gray-50 rounded-3xl border border-gray-100 text-left hover:bg-white hover:shadow-xl transition-all">
-                          <Layers size={20} className="text-purple-500 mb-3" />
-                          <div className="text-sm font-bold text-gray-900">Marketing Assets</div>
-                          <div className="text-[10px] text-gray-400 font-bold uppercase mt-1">128 Synchronized</div>
-                        </div>
-                      </div>
+              {/* Data Sync Settings */}
+              <div className="bg-white rounded-[48px] border border-gray-100 shadow-sm overflow-hidden">
+                <div className="px-10 py-8 border-b border-gray-50">
+                  <h3 className="font-black text-xl tracking-tight flex items-center gap-3"><Database size={22} className="text-indigo-600" /> Data Sync Configuration</h3>
+                </div>
+                <div className="px-10 py-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div>
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Sync Frequency</label>
+                    <select value={syncConfig.frequency} onChange={e => setSyncConfig(p => ({ ...p, frequency: e.target.value }))} className="w-full bg-slate-50 px-4 py-3.5 rounded-2xl text-[13px] font-black text-slate-700 border border-slate-100 outline-none focus:ring-4 ring-indigo-50 transition-all">
+                      {['Real-time', 'Every 5 min', 'Every 15 min', 'Hourly', 'Daily'].map(o => <option key={o}>{o}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Salesforce Org</label>
+                    <div className="bg-slate-50 px-4 py-3.5 rounded-2xl text-[13px] font-black text-slate-500 border border-slate-100 font-mono truncate">orgfarm-0bacf61b3e-dev-ed.develop</div>
+                  </div>
+                  <div>
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Data Retention</label>
+                    <select value={syncConfig.retention} onChange={e => setSyncConfig(p => ({ ...p, retention: e.target.value }))} className="w-full bg-slate-50 px-4 py-3.5 rounded-2xl text-[13px] font-black text-slate-700 border border-slate-100 outline-none focus:ring-4 ring-indigo-50 transition-all">
+                      {['30 Days', '60 Days', '90 Days', '1 Year', 'Forever'].map(o => <option key={o}>{o}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Time Zone</label>
+                    <select value={syncConfig.timezone} onChange={e => setSyncConfig(p => ({ ...p, timezone: e.target.value }))} className="w-full bg-slate-50 px-4 py-3.5 rounded-2xl text-[13px] font-black text-slate-700 border border-slate-100 outline-none focus:ring-4 ring-indigo-50 transition-all">
+                      {['UTC', 'US/Eastern', 'Asia/Kolkata', 'Europe/London'].map(o => <option key={o}>{o}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div className="px-10 pb-8">
+                  <button onClick={() => showToast(`Sync settings saved — ${syncConfig.frequency} refresh, ${syncConfig.retention} retention`, 'success')} className="px-6 py-3 bg-indigo-600 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest shadow-lg shadow-indigo-100 hover:scale-[1.02] active:scale-95 transition-all flex items-center gap-2">
+                    <RefreshCw size={14} /> Save Sync Settings
+                  </button>
+                </div>
+              </div>
 
-                      <button onClick={() => setActiveNav('Overview')} className="mt-10 px-8 py-3 bg-gray-900 text-white rounded-2xl text-sm font-bold shadow-2xl hover:bg-black transition-all">
-                        Return to Command Center
+              {/* Security */}
+              <div className="bg-white rounded-[48px] border border-gray-100 shadow-sm overflow-hidden">
+                <div className="px-10 py-8 border-b border-gray-50">
+                  <h3 className="font-black text-xl tracking-tight flex items-center gap-3"><Lock size={22} className="text-indigo-600" /> Security & Access</h3>
+                </div>
+                <div className="px-10 py-8 space-y-6">
+                  {securitySettings.map((s, i) => (
+                    <div key={i} className="flex items-center justify-between p-6 bg-slate-50/60 rounded-[28px] border border-slate-100 hover:border-indigo-100 transition-all">
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-3">
+                          <span className="font-black text-[14px] text-slate-800">{s.title}</span>
+                          {s.badge && <span className="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100 text-[8px] font-black uppercase tracking-widest">{s.badge}</span>}
+                        </div>
+                        <span className="text-[11px] font-bold text-slate-400">{s.desc}</span>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setSecuritySettings(prev => prev.map((item, idx) => idx === i ? { ...item, enabled: !item.enabled } : item))
+                          showToast(`${s.title} ${!s.enabled ? 'enabled' : 'disabled'}`, !s.enabled ? 'success' : 'info')
+                        }}
+                        className={`w-12 h-6 rounded-full border-2 cursor-pointer transition-all flex-shrink-0 relative ${s.enabled ? 'bg-indigo-600 border-indigo-600' : 'bg-slate-200 border-slate-200'}`}
+                      >
+                        <div className={`w-4 h-4 rounded-full bg-white shadow-md absolute top-0.5 transition-all ${s.enabled ? 'left-[26px]' : 'left-0.5'}`} />
                       </button>
                     </div>
-                  </div>
-                )}
+                  ))}
+                </div>
+                <div className="px-10 pb-8">
+                  <button
+                    onClick={() => { if (window.confirm('Sign out of all active sessions? You will need to log in again.')) { showToast('All sessions terminated. Redirecting...', 'info'); setTimeout(() => window.location.href = '/', 2000) } }}
+                    className="px-6 py-3 bg-rose-50 text-rose-600 border border-rose-100 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-rose-100 transition-all flex items-center gap-2"
+                  >
+                    <LogOut size={14} /> Sign Out of All Sessions
+                  </button>
+                </div>
               </div>
-            )}
-          </main>
 
-          {/* ── DRAG HANDLE FOR RESIZING ── */}
-          <div onMouseDown={() => setIsResizing(true)}
-            className="w-1.5 h-full cursor-col-resize absolute right-0 items-center justify-center group z-50 transition-colors hover:bg-indigo-400"
-            style={{ right: asideWidth }}>
-            <div className="w-1 h-8 bg-gray-200 rounded-full group-hover:bg-white opacity-0 group-hover:opacity-100 transition-opacity absolute top-1/2 -translate-y-1/2 -left-px" />
-          </div>
-
-          <aside className="border-l border-gray-100 flex-shrink-0 flex flex-col bg-white shadow-[-4px_0_24px_rgba(0,0,0,0.02)] z-10 hidden xl:flex"
-            style={{ width: asideWidth }}>
-            {/* Header */}
-            <div className="flex items-center gap-3 px-5 py-5 border-b border-gray-50" style={{ background: 'linear-gradient(135deg, #F5F3FF 0%, #EEF2FF 100%)' }}>
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-sm" style={{ background: 'linear-gradient(135deg, #4F46E5, #7C3AED)' }}>
-                <Bot size={18} color="#fff" />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-gray-900 font-heading">Analytics AI</h3>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full pulse-ring" />
-                  <span className="text-[10px] text-emerald-600 font-semibold tracking-wide">ONLINE — LIVE DATA</span>
+              {/* Danger Zone */}
+              <div className="bg-white rounded-[48px] border border-rose-100 shadow-sm overflow-hidden">
+                <div className="px-10 py-8 border-b border-rose-50 bg-rose-50/30">
+                  <h3 className="font-black text-xl tracking-tight flex items-center gap-3 text-rose-600"><AlertTriangle size={22} /> Danger Zone</h3>
+                  <p className="text-[11px] font-bold text-rose-400 uppercase tracking-widest mt-1">Irreversible actions — proceed with caution</p>
+                </div>
+                <div className="px-10 py-8 flex flex-col md:flex-row gap-4">
+                  <button
+                    onClick={() => { if (window.confirm('⚠️ This will permanently erase all analytics data. This cannot be undone. Continue?')) showToast('All analytics data has been reset', 'info') }}
+                    className="flex-1 py-4 border-2 border-dashed border-rose-100 text-rose-400 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:border-rose-300 hover:text-rose-600 hover:bg-rose-50/30 transition-all"
+                  >Reset All Analytics Data</button>
+                  <button
+                    onClick={() => { if (window.confirm('⚠️ Revoking Salesforce access will disconnect all live data streams. Continue?')) { setConnected(false); showToast('Salesforce access revoked. Reconnect to restore data.', 'error') } }}
+                    className="flex-1 py-4 border-2 border-dashed border-rose-100 text-rose-400 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:border-rose-300 hover:text-rose-600 hover:bg-rose-50/30 transition-all"
+                  >Revoke Salesforce Access</button>
+                  <button
+                    onClick={() => { if (window.confirm('⚠️ DELETE WORKSPACE: This will permanently delete your entire Pulsar AI workspace including all data, integrations, and settings. Type DELETE to confirm.')) { showToast('Workspace deletion initiated. You will be logged out.', 'error'); setTimeout(() => window.location.href = '/', 3000) } }}
+                    className="flex-1 py-4 border-2 border-dashed border-rose-200 text-rose-500 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-rose-50 hover:border-rose-400 transition-all"
+                  >Delete Workspace</button>
                 </div>
               </div>
             </div>
+          )}
+        </main>
+      </div>
 
-            {/* Messages */}
-            <div ref={chatRef} className="flex-1 p-4 space-y-4 overflow-y-auto bg-[#FAFAF8]" style={{ scrollBehavior: 'smooth' }}>
-              {messages.map((msg, i) => (
-                <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-line ${msg.role === 'user'
-                    ? 'text-white rounded-br-sm'
-                    : 'text-gray-700 bg-gray-50 rounded-bl-sm border border-gray-100 shadow-sm'
-                    }`} style={msg.role === 'user' ? { background: 'linear-gradient(135deg, #4F46E5, #7C3AED)' } : {}}>
-                    {msg.type === 'leadForm' || msg.type === 'form' ? (
-                      <LeadChatForm onComplete={(resMsg) => {
-                        setMessages(prev => prev.map((m, idx) => idx === i ? { ...m, type: 'done', text: resMsg } : m))
-                        fetchLiveLeads(true)
-                      }} onCancel={() => {
-                        setMessages(prev => prev.map((m, idx) => idx === i ? { ...m, type: 'done', text: 'Lead creation canceled.' } : m))
-                      }} />
-                    ) : msg.type === 'opportunityForm' ? (
-                      <OpportunityChatForm onComplete={(resMsg) => {
-                        setMessages(prev => prev.map((m, idx) => idx === i ? { ...m, type: 'done', text: resMsg } : m))
-                        fetchOpportunities()
-                      }} onCancel={() => {
-                        setMessages(prev => prev.map((m, idx) => idx === i ? { ...m, type: 'done', text: 'Opportunity creation canceled.' } : m))
-                      }} />
-                    ) : msg.type === 'taskForm' ? (
-                      <TaskChatForm onComplete={(resMsg) => {
-                        setMessages(prev => prev.map((m, idx) => idx === i ? { ...m, type: 'done', text: resMsg } : m))
-                        fetchTasks()
-                      }} onCancel={() => {
-                        setMessages(prev => prev.map((m, idx) => idx === i ? { ...m, type: 'done', text: 'Task creation canceled.' } : m))
-                      }} />
-                    ) : msg.type === 'accountForm' ? (
-                      <AccountChatForm onComplete={(resMsg) => {
-                        setMessages(prev => prev.map((m, idx) => idx === i ? { ...m, type: 'done', text: resMsg } : m))
-                        fetchAccounts()
-                      }} onCancel={() => {
-                        setMessages(prev => prev.map((m, idx) => idx === i ? { ...m, type: 'done', text: 'Account creation canceled.' } : m))
-                      }} />
-                    ) : msg.type === 'contactForm' ? (
-                      <ContactChatForm onComplete={(resMsg) => {
-                        setMessages(prev => prev.map((m, idx) => idx === i ? { ...m, type: 'done', text: resMsg } : m))
-                        fetchContacts()
-                      }} onCancel={() => {
-                        setMessages(prev => prev.map((m, idx) => idx === i ? { ...m, type: 'done', text: 'Contact creation canceled.' } : m))
-                      }} />
-                    ) : msg.type === 'eventForm' ? (
-                      <EventChatForm onComplete={(resMsg) => {
-                        setMessages(prev => prev.map((m, idx) => idx === i ? { ...m, type: 'done', text: resMsg } : m))
-                        fetchEvents()
-                      }} onCancel={() => {
-                        setMessages(prev => prev.map((m, idx) => idx === i ? { ...m, type: 'done', text: 'Event scheduling canceled.' } : m))
-                      }} />
-                    ) : msg.type === 'fileForm' ? (
-                      <FileChatForm onComplete={(resMsg) => {
-                        setMessages(prev => prev.map((m, idx) => idx === i ? { ...m, type: 'done', text: resMsg } : m))
-                        refreshAllSFData(true)
-                      }} onCancel={() => {
-                        setMessages(prev => prev.map((m, idx) => idx === i ? { ...m, type: 'done', text: 'File upload canceled.' } : m))
-                      }} />
-                    ) : msg.type === 'groupForm' ? (
-                      <GroupChatForm onComplete={(resMsg) => {
-                        setMessages(prev => prev.map((m, idx) => idx === i ? { ...m, type: 'done', text: resMsg } : m))
-                        fetchGroups()
-                      }} onCancel={() => {
-                        setMessages(prev => prev.map((m, idx) => idx === i ? { ...m, type: 'done', text: 'Group creation canceled.' } : m))
-                      }} />
-                    ) : msg.type === 'update' ? (
-                      <LeadUpdateForm lead={msg.lead} onComplete={(resMsg) => {
-                        setMessages(prev => prev.map((m, idx) => idx === i ? { ...m, type: 'done', text: resMsg } : m))
-                        fetchLiveLeads(true)
-                      }} onCancel={() => {
-                        setMessages(prev => prev.map((m, idx) => idx === i ? { ...m, type: 'done', text: 'Update aborted.' } : m))
-                      }} />
-                    ) : msg.type === 'delete' ? (
-                      <LeadDeleteConfirm lead={msg.lead} onComplete={(resMsg) => {
-                        setMessages(prev => prev.map((m, idx) => idx === i ? { ...m, type: 'done', text: resMsg } : m))
-                        fetchLiveLeads(true)
-                      }} onCancel={() => {
-                        setMessages(prev => prev.map((m, idx) => idx === i ? { ...m, type: 'done', text: 'Deletion canceled.' } : m))
-                      }} />
-                    ) : msg.type === 'selector' ? (
-                      <LeadSelector leads={msg.leads} type={msg.subType} onSelect={(lead) => {
-                        setMessages(prev => [...prev, { role: 'ai', text: `Got it. Opening the ${msg.subType} dialogue for **${lead.Name}**.` },
-                        generateAIReply(`${msg.subType} ${lead.Name}`, sfLeads)])
-                      }} onCancel={() => {
-                        setMessages(prev => prev.map((m, idx) => idx === i ? { ...m, type: 'done', text: 'Selection canceled.' } : m))
-                      }} />
-                    ) : (
-                      msg.text?.split('**').map((part, index) => index % 2 === 1 ? <strong key={index} className="font-bold text-gray-900">{part}</strong> : part)
-                    )}
-                  </div>
+      {/* ── AI CHAT PANEL (RIGHT) ── */}
+      {/* ── NEW FLOATING AI CHATBOT ── */}
+      {/* ── AI CHAT PANEL (FULL SCREEN OVERLAY) ── */}
+      {isChatOpen && (
+        <div className="fixed inset-0 z-[2000] bg-white flex overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          
+          {/* ── LEFT SIDEBAR ── */}
+          <div className="w-72 bg-slate-50 border-r border-slate-100 flex flex-col flex-shrink-0">
+            {/* Top Branding & New Chat */}
+            <div className="p-5 pb-2">
+              <div className="flex items-center gap-3 mb-6 px-1">
+                <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-lg">
+                  <Zap size={14} fill="white" />
                 </div>
-              ))}
-              {typing && (
-                <div className="flex justify-start">
-                  <div className="bg-gray-50 border border-gray-100 rounded-2xl rounded-bl-sm px-4 py-3 flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-full bg-indigo-400 dot1 inline-block" />
-                    <span className="w-2 h-2 rounded-full bg-indigo-400 dot2 inline-block" />
-                    <span className="w-2 h-2 rounded-full bg-indigo-400 dot3 inline-block" />
-                  </div>
+                <span className="text-[15px] font-black tracking-tight text-slate-800">Antigravity</span>
+              </div>
+              <button 
+                onClick={createNewChat}
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl py-2.5 px-4 flex items-center justify-between transition-colors shadow-sm"
+              >
+                <div className="flex items-center gap-2 text-[12px] font-bold">
+                  <Plus size={14} /> New Chat
+                </div>
+                <Search size={14} className="text-indigo-200" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-3 py-4 custom-scrollbar">
+              <div className="flex items-center justify-between px-3 mb-3">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Your Conversations</span>
+                <button 
+                  onClick={() => {
+                    setChatSessions([])
+                    setActiveSessionId(null)
+                    showToast('All conversations cleared', 'info')
+                  }} 
+                  className="text-[10px] font-bold text-slate-400 hover:text-rose-600 transition-colors"
+                >
+                  Clear All
+                </button>
+              </div>
+
+              {chatSessions.length === 0 ? (
+                <div className="flex flex-col items-center justify-center opacity-70 px-4 mt-8">
+                  <MessageCircle size={28} className="text-slate-300 mb-3" />
+                  <span className="text-[11px] font-bold text-slate-400 text-center leading-relaxed">No conversations yet.<br/>Click + New Chat to begin.</span>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {Object.entries(groupSessionsByTime(chatSessions)).map(([groupName, sessions]) => (
+                    sessions.length > 0 && (
+                      <div key={groupName} className="space-y-0.5">
+                        <div className="px-3 py-1 mb-1 text-[9px] font-black text-slate-300 uppercase tracking-widest">{groupName}</div>
+                        {sessions.map((session) => (
+                          <div 
+                            key={session.id}
+                            onClick={() => { if (editingSessionId !== session.id) setActiveSessionId(session.id) }}
+                            className={`group w-full flex items-center justify-between px-3 py-2.5 rounded-xl cursor-pointer transition-all ${activeSessionId === session.id ? 'bg-indigo-50/80 text-indigo-700' : 'hover:bg-slate-100 text-slate-600'}`}
+                          >
+                            <div className="flex items-center gap-2.5 flex-1 min-w-0 pr-2">
+                              <MessageCircle size={14} className={`flex-shrink-0 ${activeSessionId === session.id ? 'text-indigo-600' : 'text-slate-400'}`} />
+                              {editingSessionId === session.id ? (
+                                <input 
+                                  autoFocus
+                                  value={editingTitle}
+                                  onChange={(e) => setEditingTitle(e.target.value)}
+                                  onBlur={() => {
+                                    setChatSessions(prev => prev.map(s => s.id === session.id ? { ...s, name: editingTitle || 'Unnamed Chat' } : s))
+                                    setEditingSessionId(null)
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') e.target.blur()
+                                    if (e.key === 'Escape') setEditingSessionId(null)
+                                  }}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="flex-1 bg-white border border-indigo-200 outline-none rounded px-1.5 py-[1px] text-[12px] font-bold text-slate-800 shadow-sm min-w-0 w-full"
+                                />
+                              ) : (
+                                <span className="text-[12px] font-bold truncate">{session.name}</span>
+                              )}
+                            </div>
+                            {/* Session Actions (Visible on Hover/Touch) */}
+                            {editingSessionId !== session.id && (
+                              <div className="flex items-center gap-1.5 text-slate-400 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button className="hover:text-indigo-600 transition-colors p-1" title="Pin Chat"><Pin size={13} /></button>
+                                <button 
+                                  onClick={(e) => { e.stopPropagation(); setEditingTitle(session.name); setEditingSessionId(session.id); }} 
+                                  className="hover:text-indigo-600 transition-colors p-1"
+                                  title="Edit Title"
+                                ><Edit2 size={13} /></button>
+                                <button 
+                                  onClick={(e) => deleteSession(e, session.id)} 
+                                  className="hover:text-rose-600 transition-colors p-1"
+                                  title="Delete Conversation"
+                                ><Trash2 size={13} /></button>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  ))}
                 </div>
               )}
             </div>
 
-            {/* Quick chips & Input */}
-            <div className="bg-white border-t border-gray-100 p-4 shadow-[0_-4px_24px_rgba(0,0,0,0.02)]">
-              <div className="flex flex-wrap gap-2 mb-3">
-                {Object.keys(aiResponses).map((q, i) => (
-                  <button key={i} onClick={() => sendMessage(q)}
-                    className="text-[10px] px-2.5 py-1.5 rounded-full border border-indigo-100 text-indigo-600 bg-indigo-50/50 hover:bg-indigo-100 transition-colors font-semibold whitespace-nowrap">
-                    {q.substring(0, 20)}...
-                  </button>
-                ))}
-              </div>
-
-              <div className="flex items-center gap-2 rounded-xl px-3 py-2 border border-gray-200 focus-within:border-indigo-400 transition-colors bg-gray-50 shadow-inner relative">
-                <div className="relative quick-action-trigger">
-                  <button onClick={() => setShowQuickActions(!showQuickActions)}
-                    className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all quick-action-trigger ${showQuickActions ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white text-gray-500 hover:bg-gray-100 shadow-sm border border-gray-100'}`}>
-                    <Plus size={14} className={`transition-transform duration-300 ${showQuickActions ? 'rotate-45' : ''}`} />
-                  </button>
-
-                  {/* Floating Action Menu */}
-                  {showQuickActions && (
-                    <div className="absolute bottom-full left-0 mb-3 w-48 glass-menu rounded-2xl p-2 animate-slide-up z-50 overflow-hidden">
-                      <div className="text-[9px] font-bold text-gray-400 uppercase px-3 py-2 border-b border-gray-100 mb-1">Sales Operations</div>
-                      {[
-                        { icon: UserPlus, label: 'Add New Lead', color: 'text-emerald-600', cmd: 'create a new lead' },
-                        { icon: Briefcase, label: 'Add Opportunity', color: 'text-indigo-600', cmd: 'create a new opportunity' },
-                        { icon: ClipboardList, label: 'Create Task', color: 'text-amber-600', cmd: 'create a new task' },
-                        { icon: Building2, label: 'Add Account', color: 'text-sky-600', cmd: 'create a new account' },
-                        { icon: Contact, label: 'Add Contact', color: 'text-rose-600', cmd: 'create a new contact' },
-                        { icon: Users2, label: 'Create Group', color: 'text-purple-600', cmd: 'create a new group' },
-                        { icon: CalendarIcon, label: 'Schedule Event', color: 'text-blue-600', cmd: 'schedule a meeting' },
-                        { icon: FileDown, label: 'Upload File', color: 'text-blue-600', cmd: 'upload a file' },
-                        { icon: Users2, label: 'New Group', color: 'text-orange-600', cmd: 'create a new group' },
-                      ].map((action, i) => (
-                        <button key={i} onClick={() => { sendMessage(action.cmd); setShowQuickActions(false) }}
-                          className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 rounded-xl transition-colors group text-left">
-                          <div className={`w-7 h-7 rounded-lg bg-white shadow-sm flex items-center justify-center ${action.color} group-hover:scale-110 transition-transform`}>
-                            <action.icon size={13} />
-                          </div>
-                          <span className="text-xs font-bold text-gray-700">{action.label}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
+            {/* Footer Profile & Settings */}
+            <div className="p-4 border-t border-slate-100 space-y-1">
+              <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 text-slate-600 transition-colors text-[12px] font-bold">
+                <Settings size={14} className="text-slate-400" /> Settings
+              </button>
+              <div className="w-full flex items-center justify-between gap-3 px-3 py-2.5 mt-2 rounded-xl border border-slate-200 bg-white shadow-sm">
+                <div className="flex items-center gap-2 truncate">
+                  <div className="w-7 h-7 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-[10px] font-black flex-shrink-0">DD</div>
+                  <span className="text-[12px] font-bold text-slate-700 truncate">Divya Dharshini</span>
                 </div>
-
-                <input value={inputVal} onChange={e => setInputVal(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && sendMessage()}
-                  placeholder="Ask anything..."
-                  className="flex-1 bg-transparent outline-none text-sm text-gray-700 placeholder-gray-400" />
-                <button onClick={() => sendMessage()} disabled={typing}
-                  className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
-                  style={{ background: 'linear-gradient(135deg, #4F46E5, #7C3AED)' }}>
-                  <Send size={13} color="#fff" />
-                </button>
               </div>
             </div>
-          </aside>
+          </div>
+
+          {/* ── MAIN CHAT CANVAS ── */}
+          <div className="flex-1 flex flex-col relative bg-white">
+            {/* Header */}
+            <div className="h-16 px-6 border-b border-slate-50 flex items-center justify-between flex-shrink-0">
+              <div className="flex items-center gap-3">
+                <span className="text-[14px] font-black text-slate-800">
+                  {chatSessions.find(s => s.id === activeSessionId)?.name || 'New Chat'}
+                </span>
+                   <div className="relative group">
+                     {activeModel === 'llama3' ? <Sparkles size={10} className="absolute left-2 top-1/2 -translate-y-1/2 text-indigo-500 pointer-events-none" /> : <Bot size={10} className="absolute left-2 top-1/2 -translate-y-1/2 text-orange-500 pointer-events-none" />}
+                     <select 
+                       value={activeModel} 
+                       onChange={(e) => setActiveModel(e.target.value)}
+                       className={`pl-5 pr-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest outline-none border-none cursor-pointer transition-all ${activeModel === 'llama3' ? 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100' : 'bg-orange-50 text-orange-600 hover:bg-orange-100'}`}
+                     >
+                       <option value="llama3">llama3</option>
+                       <option value="claude">claude</option>
+                     </select>
+                   </div>
+                   <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 ${ollamaConnected ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                     <div className={`w-1.5 h-1.5 rounded-full ${ollamaConnected ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
+                     {ollamaConnected ? 'Connected' : 'Offline'}
+                   </span>
+                </div>
+                <button 
+                  onClick={() => setIsChatOpen(false)}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-600 text-[11px] font-bold transition-colors"
+              >
+                <X size={14} /> Close Chat
+              </button>
+            </div>
+
+            {/* Chat Message Scroll Area */}
+            <div ref={chatRef} className="flex-1 overflow-y-auto px-10 py-8 custom-scrollbar scroll-smooth">
+              <div className="max-w-4xl mx-auto space-y-8 pb-32">
+                {messages.map((m, i) => (
+                  <div key={i} className={`flex w-full ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    
+                    {/* User Message */}
+                    {m.role === 'user' && (
+                      <div className="flex items-center gap-3 max-w-[80%] group">
+                        <button className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-indigo-600 p-1.5 rounded-lg transition-all"><Edit2 size={14} /></button>
+                        <div className="px-5 py-3.5 bg-indigo-600 text-white rounded-[24px] rounded-br-sm shadow-md text-[14px] font-medium leading-relaxed">
+                          {m.text}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* AI Message */}
+                    {m.role === 'ai' && (
+                      <div className="flex gap-4 max-w-[90%] w-full">
+                        {/* Bot Avatar */}
+                        <div className="w-8 h-8 rounded-lg bg-indigo-600 flex flex-shrink-0 items-center justify-center text-white shadow-sm mt-1">
+                          <Bot size={16} />
+                        </div>
+                        
+                        <div className="flex-1 flex flex-col gap-1.5 min-w-0">
+                          {/* Bot Name Label */}
+                          <div className="text-[12px] font-black text-indigo-600 tracking-tight">Antigravity</div>
+                          
+                          {/* Text/Widgets */}
+                          <div className="text-[14px] text-slate-700 leading-relaxed space-y-3 font-medium">
+                            {!m.type && (
+                              <div className="whitespace-pre-wrap">
+                                {m.text}
+                                {isStreaming && i === messages.length - 1 && (
+                                  <span className="inline-block w-1.5 h-4 ml-0.5 bg-indigo-400 animate-pulse align-middle" />
+                                )}
+                              </div>
+                            )}
+
+                            {/* Render AI Dynamic Widgets directly in line */}
+                            {m.type === 'form' && (
+                              <div className="max-w-2xl bg-white rounded-[24px] border border-slate-100 shadow-sm p-2 mb-2">
+                                <DetailedForm
+                                  title={`${m.meta.object}`} object={m.meta.object} refresh={fetchAllData}
+                                  icon={m.meta.object === 'Lead' ? Users : m.meta.object === 'Account' ? Building2 : Zap}
+                                  fields={FORMS[m.meta.object]}
+                                  onComplete={res => sendMessage(null, 'reply', { text: res })}
+                                  onCancel={() => setMessages(prev => prev.slice(0, -1))}
+                                />
+                              </div>
+                            )}
+
+                            {m.type === 'updateForm' && (
+                              <div className="max-w-2xl bg-white rounded-[24px] border border-slate-100 shadow-sm p-2 mb-2">
+                                <DetailedForm
+                                  title={`Update ${m.meta.object}`} object={m.meta.object} method="PUT" refresh={fetchAllData}
+                                  initialData={m.meta.record} icon={Settings} fields={FORMS[m.meta.object]}
+                                  onComplete={res => sendMessage(null, 'reply', { text: res })}
+                                  onCancel={() => setMessages(prev => prev.slice(0, -1))}
+                                />
+                              </div>
+                            )}
+
+                            {m.type === 'selector' && (
+                              <div className="max-w-2xl bg-white rounded-[24px] border border-slate-100 shadow-sm p-4 mb-2">
+                                <RecordSelector
+                                  type={m.meta.object} title={`Search ${m.meta.object} to ${m.meta.mode}`}
+                                  onSelect={(rec) => {
+                                    if (m.meta.mode === 'delete') handleDelete(m.meta.object, rec)
+                                    else setMessages(prev => [...prev, { role: 'ai', text: `Selected: ${rec.Name || rec.LastName || rec.Subject}. Opening edit pane...`, type: 'updateForm', meta: { ...m.meta, record: rec } }])
+                                  }}
+                                  onCancel={() => setMessages(prev => prev.slice(0, -1))}
+                                />
+                              </div>
+                            )}
+
+                            {m.type === 'table' && (
+                              <div className="w-full bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden mb-2">
+                                <ChatTable data={m.meta.data} title={m.meta.title} object={m.meta.object} />
+                              </div>
+                            )}
+
+                            {m.type === 'upload' && (
+                              <div className="max-w-2xl bg-white rounded-[24px] border border-slate-100 shadow-sm p-2 mb-2">
+                                <FileUpload onCancel={() => setMessages(prev => prev.slice(0, -1))} onComplete={res => sendMessage(null, 'reply', { text: res })} />
+                              </div>
+                            )}
+                          </div>
+
+                          {/* AI Action Toolstrip */}
+                          <div className="flex items-center justify-between mt-2 max-w-2xl">
+                            <div className="flex items-center gap-1">
+                              <button onClick={() => showToast('Thanks for your feedback!', 'success')} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"><ThumbsUp size={14} /></button>
+                              <button onClick={() => showToast('We will improve this.', 'info')} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"><ThumbsDown size={14} /></button>
+                              <div className="w-px h-3 bg-slate-200 mx-1" />
+                              <button 
+                                onClick={() => {
+                                  navigator.clipboard.writeText(m.text)
+                                  showToast('Response copied to clipboard', 'success')
+                                }}
+                                className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                              >
+                                <Copy size={14} />
+                              </button>
+                              <button onClick={() => showToast('Advanced options coming soon', 'info')} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"><MoreHorizontal size={14} /></button>
+                            </div>
+                            <button 
+                              onClick={() => {
+                                // Regenerate: Find last user message, or resend prompt if empty
+                                const lastUserMsg = [...messages.slice(0, i)].reverse().find(m => m.role === 'user')
+                                if (lastUserMsg) {
+                                  setMessages(prev => prev.slice(0, i))
+                                  sendMessage(lastUserMsg.text)
+                                }
+                              }}
+                              className="flex items-center gap-1.5 px-2 py-1 text-[11px] font-bold text-slate-400 hover:text-indigo-600 transition-colors"
+                            >
+                              <RefreshCw size={12} /> Regenerate
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+                {typing && (
+                  <div className="flex gap-4 w-full">
+                    <div className="w-8 h-8 rounded-lg bg-indigo-600 flex flex-shrink-0 items-center justify-center text-white shadow-sm mt-1">
+                      <Bot size={16} />
+                    </div>
+                    <div className="flex-1 flex flex-col gap-1.5">
+                      <div className="text-[12px] font-black text-indigo-600 tracking-tight">Antigravity</div>
+                      <div className="flex gap-1.5 pt-2">
+                        <span className="w-1.5 h-1.5 bg-slate-300 rounded-full animate-bounce" />
+                        <span className="w-1.5 h-1.5 bg-slate-300 rounded-full animate-bounce delay-75" />
+                        <span className="w-1.5 h-1.5 bg-slate-300 rounded-full animate-bounce delay-150" />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Expansive Input Area */}
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white to-transparent pt-10 pb-6 px-10">
+              <div className="max-w-4xl mx-auto relative">
+                
+                {/* Suggestions Tooltip Overlay */}
+                {showSuggestions && (suggestions.length > 0 || recentCommands.length > 0) && (
+                  <div className="absolute bottom-full left-0 right-0 mb-3 bg-white rounded-2xl border border-slate-100 shadow-xl overflow-hidden animate-in slide-in-from-bottom-2 duration-150 z-[1200] max-h-[280px] overflow-y-auto">
+                    {suggestions.length > 0 && (
+                      <div className="p-2">
+                        <div className="px-3 py-1 text-[10px] font-black text-slate-400 uppercase tracking-widest">Suggestions</div>
+                        {suggestions.map((s, idx) => (
+                          <button key={s} onMouseEnter={() => setSelectedIndex(idx)} onClick={() => sendMessage(s)} className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-[13px] font-bold text-slate-700 transition-all ${selectedIndex === idx ? 'bg-indigo-50 text-indigo-700' : 'hover:bg-slate-50'}`}>
+                            <div className="flex items-center gap-2 truncate">
+                              {getSuggestionIcon(s)}
+                              <span className="truncate">{highlightMatch(s, inputVal)}</span>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="relative flex items-end gap-2 bg-slate-50 p-2 pl-4 rounded-3xl border border-slate-200 focus-within:border-indigo-300 focus-within:bg-white focus-within:ring-4 focus-within:ring-indigo-50 transition-all shadow-sm">
+                  <button onClick={() => setOpMenuOpen(!opMenuOpen)} className="p-2 text-slate-400 hover:text-indigo-600 transition-colors mb-1"><Plus size={20} /></button>
+                  <textarea
+                    ref={chatInputRef}
+                    value={inputVal}
+                    rows={1}
+                    onFocus={() => { setShowSuggestions(true); setUnreadCount(0) }}
+                    onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                    onChange={e => { 
+                      setInputVal(e.target.value); 
+                      setShowSuggestions(true);
+                      e.target.style.height = 'auto';
+                      e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+                    }}
+                    onKeyDown={e => {
+                      if (e.key === 'ArrowDown') setSelectedIndex(p => (p + 1) % (suggestions.length + (!inputVal ? 3 : 0)))
+                      else if (e.key === 'ArrowUp') setSelectedIndex(p => (p - 1 + (suggestions.length + (!inputVal ? 3 : 0))) % (suggestions.length + (!inputVal ? 3 : 0)))
+                      else if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault()
+                        if (selectedIndex >= 0 && suggestions[selectedIndex]) {
+                          sendMessage(suggestions[selectedIndex])
+                        } else {
+                          sendMessage()
+                        }
+                      }
+                      else if (e.key === 'Escape') setShowSuggestions(false)
+                    }}
+                    placeholder={ollamaConnected ? "Message Antigravity..." : "Ollama offline..."}
+                    className="flex-1 bg-transparent border-none outline-none text-[15px] font-medium text-slate-800 placeholder-slate-400 resize-none py-3 min-h-[44px] custom-scrollbar"
+                  />
+                  <div className="flex items-center gap-1 mb-1 pr-1">
+                    {isStreaming ? (
+                      <button 
+                        onClick={() => abortControllerRef.current?.abort()}
+                        className="w-10 h-10 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center hover:bg-rose-100 transition-all"
+                      >
+                        <div className="w-3 h-3 bg-rose-600 rounded-sm" />
+                      </button>
+                    ) : (
+                      <>
+                        <button onClick={() => showToast('Web search capability integrated', 'info')} className="p-2 text-slate-400 hover:text-indigo-600 transition-colors"><Globe size={18} /></button>
+                        <button onClick={() => showToast('Voice search ready', 'info')} className="p-2 text-slate-400 hover:text-indigo-600 transition-colors"><Mic2 size={18} /></button>
+                        <button 
+                          onClick={() => sendMessage()} 
+                          disabled={(!inputVal.trim() && selectedIndex < 0) || !ollamaConnected}
+                          className="ml-1 w-10 h-10 rounded-2xl bg-indigo-600 disabled:bg-slate-300 text-white flex items-center justify-center shadow-md hover:bg-indigo-700 active:scale-95 transition-all"
+                        >
+                          <Send size={18} className={inputVal.trim() ? "translate-x-0.5" : ""} />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <div className="text-center mt-3">
+                  <span className="text-[10px] font-medium text-slate-400">Pulsar AI can make mistakes. Consider verifying important data metrics.</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
-      {/* ── KPI SUMMARY MODAL ── */}
-      {showKPIModal && (
-        <KPIModal
-          kpi={activeKPIs.find(k => k.label === selectedKPI)}
-          onClose={() => setShowKPIModal(false)}
-          channelData={activeChannels}
-          onViewDetails={() => {
-            setShowKPIModal(false)
-            setTimeout(() => {
-              const el = document.getElementById('drilldown-analysis')
-              el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-            }, 300)
+      )}
+
+      {/* Floating Toggle Button (Only visible if chat is not open) */}
+      {!isChatOpen && (
+        <div className="fixed bottom-8 right-8 z-[1000] flex flex-col items-end gap-4 pointer-events-none">
+          <button
+            onClick={() => { setIsChatOpen(true); setIsChatMinimized(false); setUnreadCount(0) }}
+            className="w-16 h-16 rounded-[24px] bg-indigo-600 text-white shadow-2xl flex items-center justify-center pointer-events-auto hover:scale-110 active:scale-95 transition-all group relative animate-in fade-in zoom-in duration-500"
+            style={{ background: 'linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)' }}
+          >
+            <div className="absolute inset-0 rounded-[24px] animate-ping bg-indigo-400 opacity-20 scale-110" />
+            <Bot size={28} />
+            <div className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-400 border-2 border-white rounded-full" />
+            
+            {!isChatOpen && (
+              <div className="absolute right-full mr-4 bg-slate-900/80 backdrop-blur-md text-white text-[9px] font-black uppercase tracking-widest px-3 py-2 rounded-xl opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0 whitespace-nowrap hidden md:block">
+                Press <span className="bg-white/20 px-1.5 py-0.5 rounded ml-1">/</span> to chat
+              </div>
+            )}
+          </button>
+        </div>
+      )}
+
+      {showModal && <ConnectSalesforceModal onClose={() => setShowModal(false)} />}
+
+      {/* Global Modals & Menu */}
+      {menuData && (
+        <ContextualMenu
+          {...menuData}
+          onClose={closeActionMenu}
+          onEdit={handleEditRecord}
+          onDelete={handleDeleteRecord}
+          onStageChange={handleUpdateStage}
+          onSync={handleSyncRecord}
+        />
+      )}
+
+      {editModal && (
+        <div className="fixed inset-0 z-[600] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300">
+          <DetailedForm
+            title={`Edit ${editModal.type}`}
+            fields={editModal.fields}
+            initialData={editModal.record}
+            object={editModal.type}
+            method="PUT"
+            icon={editModal.type === 'Opportunity' ? Briefcase : UserPlus}
+            onComplete={(msg) => { alert(msg); setEditModal(null); fetchAllData() }}
+            onCancel={() => setEditModal(null)}
+          />
+        </div>
+      )}
+
+      {showConnectAppModal && (
+        <ConnectAppModal
+          onClose={() => setShowConnectAppModal(false)}
+          onConnect={(app) => {
+            setAppStatuses(prev => ({ ...prev, [app.name]: 'Connected' }));
+            showToast(`${app.name} connected successfully!`, 'success');
           }}
         />
+      )}
+
+      {showAddWebhookModal && (
+        <AddWebhookModal
+          onClose={() => setShowAddWebhookModal(false)}
+          onAdd={(hook) => {
+            setWebhooks(prev => [...prev, { ...hook, id: Date.now(), calls: 0, success: 100 }]);
+            showToast(`Webhook for ${hook.event} registered!`, 'success');
+          }}
+        />
+      )}
+
+      {toast && <ToastNotification {...toast} onClose={() => setToast(null)} />}
+      {showCreateMenu && (
+        <>
+          <div className="fixed inset-0 z-[2999]" onClick={() => setShowCreateMenu(null)} />
+          <div 
+            className="fixed z-[3000] bg-white rounded-[32px] shadow-[0_32px_128px_rgba(0,0,0,0.18)] border border-slate-100 p-2 min-w-[240px] animate-in zoom-in-95 duration-150 overflow-hidden"
+            style={{ 
+              left: Math.min(showCreateMenu.x, window.innerWidth - 260), 
+              top: Math.min(showCreateMenu.y, window.innerHeight - 420) 
+            }}
+          >
+            <div className="px-5 py-4 mb-2">
+              <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Operations Registry</div>
+              <div className="text-[13px] font-black text-slate-800 mt-1">Select Entry Type</div>
+            </div>
+            <div className="space-y-0.5">
+              {[
+                { label: 'Lead', icon: Users, cmd: "create a new lead", color: 'text-indigo-600', bg: 'bg-indigo-50' },
+                { label: 'Opportunity', icon: Zap, cmd: "create a new opportunity", color: 'text-amber-500', bg: 'bg-amber-50' },
+                { label: 'Account', icon: Building2, cmd: "create a new account", color: 'text-sky-500', bg: 'bg-sky-50' },
+                { label: 'Contact', icon: Contact, cmd: "create a new contact", color: 'text-emerald-500', bg: 'bg-emerald-50' },
+                { label: 'Task', icon: ClipboardList, cmd: "create a new task", color: 'text-rose-500', bg: 'bg-rose-50' },
+                { label: 'Event', icon: Calendar, cmd: "create a new event", color: 'text-violet-500', bg: 'bg-violet-50' },
+                { label: 'Group', icon: Users2, cmd: "create a new group", color: 'text-slate-500', bg: 'bg-slate-50' },
+              ].map(item => (
+                <button 
+                  key={item.label}
+                  onClick={() => { 
+                    setShowCreateMenu(null); 
+                    setIsChatOpen(true);
+                    setMessages(prev => [...prev, { 
+                      role: 'ai', 
+                      text: `✨ Opening manual entry form for new **${item.label}**. Please provide the details below:`, 
+                      type: 'form', 
+                      meta: { object: item.label } 
+                    }]);
+                  }}
+                  className="w-full flex items-center gap-4 px-4 py-3 rounded-2xl hover:bg-slate-50 text-[14px] font-bold text-slate-700 transition-all group text-left"
+                >
+                  <div className={`w-10 h-10 rounded-xl ${item.bg} flex items-center justify-center ${item.color} group-hover:scale-110 transition-transform`}>
+                    <item.icon size={18} />
+                  </div>
+                  <div className="flex flex-col">
+                    <span>New {item.label}</span>
+                    <span className="text-[10px] text-slate-400 font-medium">Create via AI Assistant</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
       )}
     </div>
   )

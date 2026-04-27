@@ -12,6 +12,13 @@ const PORT = process.env.PORT || 3001
 app.use(cors())
 app.use(express.json({ limit: '5mb' }))
 
+app.get('/api/config', (req, res) => {
+    res.json({
+        clientId: process.env.SF_CLIENT_ID || 'Not Configured',
+        clientSecret: process.env.SF_CLIENT_SECRET || 'Not Configured'
+    })
+})
+
 const DASHBOARD_URL = 'http://localhost:9000'
 
 // Create the unified OAuth2 client config
@@ -23,6 +30,64 @@ const loginUrl = 'https://login.salesforce.com'
 // Store tokens and PKCE verifier temporarily in memory
 let globalConn = null;
 let pkceVerifier = '';
+
+// ==========================================
+// DELETION DEPENDENCY MAPPING
+// ==========================================
+const DEPENDENCIES = {
+    'Account': [
+        { type: 'Case', field: 'AccountId' },
+        { type: 'Opportunity', field: 'AccountId' },
+        { type: 'Contact', field: 'AccountId' },
+        { type: 'Task', field: 'WhatId' },
+        { type: 'Event', field: 'WhatId' }
+    ],
+    'Contact': [
+        { type: 'Case', field: 'ContactId' },
+        { type: 'Task', field: 'WhoId' },
+        { type: 'Event', field: 'WhoId' }
+    ],
+    'Lead': [
+        { type: 'Task', field: 'WhoId' },
+        { type: 'Event', field: 'WhoId' }
+    ],
+    'Opportunity': [
+        { type: 'Task', field: 'WhatId' },
+        { type: 'Event', field: 'WhatId' }
+    ]
+}
+
+/**
+ * Recursively cleans up blocking child records before deleting target records.
+ * @param {jsforce.Connection} conn 
+ * @param {string} sobject - The API Name of the parent object (e.g., 'Account')
+ * @param {string|string[]} ids - Record ID or array of IDs to destroy
+ */
+async function smartDestroy(conn, sobject, ids) {
+    const idArray = Array.isArray(ids) ? ids : [ids];
+    if (idArray.length === 0) return { success: true };
+
+    const children = DEPENDENCIES[sobject] || [];
+
+    for (const id of idArray) {
+        for (const child of children) {
+            try {
+                const records = await conn.sobject(child.type).find({ [child.field]: id }, 'Id').execute();
+                if (records.length > 0) {
+                    const childIds = records.map(r => r.Id);
+                    console.log(`[SmartDestroy] 🧹 Cleaning up ${records.length} ${child.type} records for ${sobject}:${id}`);
+                    // Recurse into children in case THEY have children (e.g. Contacts have Cases)
+                    await smartDestroy(conn, child.type, childIds);
+                }
+            } catch (err) {
+                console.warn(`[SmartDestroy] ⚠️ Cleanup warning for ${child.type}: ${err.message}`);
+            }
+        }
+    }
+
+    // Now destroy the actual target(s)
+    return await conn.sobject(sobject).destroy(idArray);
+}
 
 function generatePKCE() {
     const verifier = crypto.randomBytes(32).toString('base64url')
@@ -133,16 +198,20 @@ app.get('/api/leads', async (req, res) => {
 app.post('/api/leads', async (req, res) => {
     if (!globalConn) return res.status(401).json({ success: false, error: 'Not authenticated' })
     try {
-        const { lastName, company, firstName, email, phone } = req.body
+        const body = req.body
+        const lastName = body.LastName || body.lastName
+        const company = body.Company || body.company
+
         if (!lastName || !company) throw new Error('LastName and Company are required.')
 
+        const record = { ...body, LeadSource: body.LeadSource || body.leadSource || 'Chatbot AI' }
+        // Remove lowercase keys to avoid confusion if both exist
+        delete record.lastName; delete record.firstName; delete record.company; delete record.email; delete record.phone; delete record.leadSource;
+
         const result = await globalConn.sobject('Lead').create({
+            ...record,
             LastName: lastName,
-            Company: company,
-            FirstName: firstName || '',
-            Email: email || '',
-            Phone: phone || '',
-            LeadSource: 'Chatbot AI'
+            Company: company
         })
 
         if (result.success) {
@@ -158,13 +227,16 @@ app.post('/api/leads', async (req, res) => {
 app.post('/api/accounts', async (req, res) => {
     if (!globalConn) return res.status(401).json({ success: false, error: 'Not authenticated' })
     try {
-        const { name, industry, website, phone } = req.body
+        const body = req.body
+        const name = body.Name || body.name
         if (!name) throw new Error('Account Name is required.')
+
+        const record = { ...body }
+        delete record.name; delete record.industry; delete record.website; delete record.phone;
+
         const result = await globalConn.sobject('Account').create({
-            Name: name,
-            Industry: industry || '',
-            Website: website || '',
-            Phone: phone || ''
+            ...record,
+            Name: name
         })
         if (result.success) {
             console.log(`[OAuth API] 🏢 Created Account: ${result.id}`)
@@ -179,14 +251,16 @@ app.post('/api/accounts', async (req, res) => {
 app.post('/api/contacts', async (req, res) => {
     if (!globalConn) return res.status(401).json({ success: false, error: 'Not authenticated' })
     try {
-        const { firstName, lastName, email, phone, accountId } = req.body
+        const body = req.body
+        const lastName = body.LastName || body.lastName
         if (!lastName) throw new Error('Last Name is required.')
+
+        const record = { ...body }
+        delete record.firstName; delete record.lastName; delete record.email; delete record.phone; delete record.accountId;
+
         const result = await globalConn.sobject('Contact').create({
-            FirstName: firstName || '',
-            LastName: lastName,
-            Email: email || '',
-            Phone: phone || '',
-            AccountId: accountId || null
+            ...record,
+            LastName: lastName
         })
         if (result.success) {
             console.log(`[OAuth API] 👥 Created Contact: ${result.id}`)
@@ -201,7 +275,13 @@ app.post('/api/contacts', async (req, res) => {
 app.post('/api/events', async (req, res) => {
     if (!globalConn) return res.status(401).json({ success: false, error: 'Not authenticated' })
     try {
-        const { subject, startDateTime, endDateTime, description, location } = req.body
+        const body = req.body
+        const subject = body.Subject || body.subject
+        const startDateTime = body.StartDateTime || body.startDateTime
+        const endDateTime = body.EndDateTime || body.endDateTime
+        const description = body.Description || body.description
+        const location = body.Location || body.location
+
         if (!subject || !startDateTime || !endDateTime) throw new Error('Subject, Start Time, and End Time are required.')
         const result = await globalConn.sobject('Event').create({
             Subject: subject,
@@ -223,15 +303,17 @@ app.post('/api/events', async (req, res) => {
 app.put('/api/leads/:id', async (req, res) => {
     if (!globalConn) return res.status(401).json({ success: false, error: 'Not authenticated' })
     try {
-        const { status, rating, company, firstName, lastName, email, phone } = req.body
+        const body = req.body
         const payload = { Id: req.params.id }
-        if (status) payload.Status = status
-        if (rating) payload.Rating = rating
-        if (company) payload.Company = company
-        if (firstName) payload.FirstName = firstName
-        if (lastName) payload.LastName = lastName
-        if (email) payload.Email = email
-        if (phone) payload.Phone = phone
+        
+        // Handle both lowercase and ProperCase from frontend
+        if (body.Status || body.status) payload.Status = body.Status || body.status
+        if (body.Rating || body.rating) payload.Rating = body.Rating || body.rating
+        if (body.Company || body.company) payload.Company = body.Company || body.company
+        if (body.FirstName || body.firstName) payload.FirstName = body.FirstName || body.firstName
+        if (body.LastName || body.lastName) payload.LastName = body.LastName || body.lastName
+        if (body.Email || body.email) payload.Email = body.Email || body.email
+        if (body.Phone || body.phone) payload.Phone = body.Phone || body.phone
 
         const result = await globalConn.sobject('Lead').update(payload)
         if (result.success) {
@@ -265,7 +347,7 @@ app.delete('/api/leads/:id', async (req, res) => {
 app.get('/api/opportunities', async (req, res) => {
     if (!globalConn) return res.status(401).json({ success: false, error: 'Not authenticated' })
     try {
-        const result = await globalConn.query("SELECT Id, Name, Amount, StageName, CloseDate, CreatedDate, IsClosed, IsWon FROM Opportunity ORDER BY CreatedDate DESC LIMIT 100")
+        const result = await globalConn.query("SELECT Id, Name, Amount, StageName, CloseDate, CreatedDate, IsClosed, IsWon, Probability FROM Opportunity ORDER BY CreatedDate DESC LIMIT 100")
         res.json({ success: true, opportunities: result.records })
     } catch (error) { res.status(500).json({ success: false, error: error.message }) }
 })
@@ -310,13 +392,18 @@ app.get('/api/events', async (req, res) => {
 app.post('/api/tasks', async (req, res) => {
     if (!globalConn) return res.status(401).json({ success: false, error: 'Not authenticated' })
     try {
-        const { subject, status, priority, dueDate } = req.body
+        const body = req.body
+        const subject = body.Subject || body.subject
         if (!subject) throw new Error('Subject is required.')
+
+        const record = { ...body }
+        delete record.subject; delete record.status; delete record.priority; delete record.dueDate;
+
         const result = await globalConn.sobject('Task').create({
+            ...record,
             Subject: subject,
-            Status: status || 'Not Started',
-            Priority: priority || 'Normal',
-            ActivityDate: dueDate || null
+            Status: body.Status || body.status || 'Not Started',
+            Priority: body.Priority || body.priority || 'Normal'
         })
         if (result.success) res.json({ success: true, id: result.id })
         else throw new Error(result.errors.join(', '))
@@ -336,12 +423,19 @@ app.get('/api/groups', async (req, res) => {
 app.post('/api/opportunities', async (req, res) => {
     if (!globalConn) return res.status(401).json({ success: false, error: 'Not authenticated' })
     try {
-        const { name, amount, stage, closeDate } = req.body
+        const body = req.body
+        const name = body.Name || body.name
+        const stage = body.StageName || body.stage
+        const closeDate = body.CloseDate || body.closeDate
+
         if (!name || !stage || !closeDate) throw new Error('Name, Stage, and Close Date are required.')
 
+        const record = { ...body }
+        delete record.name; delete record.amount; delete record.stage; delete record.closeDate;
+
         const result = await globalConn.sobject('Opportunity').create({
+            ...record,
             Name: name,
-            Amount: amount || 0,
             StageName: stage,
             CloseDate: closeDate
         })
@@ -357,18 +451,47 @@ app.post('/api/opportunities', async (req, res) => {
 
 // == NEW SALESFORCE CRM SUITE ENDPOINTS ==
 
-// 1. Get List of Reports
+// 1. Get List of Reports (Strictly filtering for User-owned custom reports)
 app.get('/api/reports', async (req, res) => {
     if (!globalConn) return res.status(401).json({ success: false, error: 'Not authenticated' })
     try {
-        const result = await globalConn.query("SELECT Id, Name, Format, LastRunDate FROM Report ORDER BY LastRunDate DESC LIMIT 20")
+        // We filter for reports owned by Users (not system/folders) to ensure they are deletable and custom.
+        const result = await globalConn.query("SELECT Id, Name, Format, LastRunDate FROM Report WHERE Owner.Type = 'User' ORDER BY LastRunDate DESC LIMIT 50")
         res.json({ success: true, reports: result.records })
+    } catch (error) {
+        // Fallback if the Owner.Type filter is not supported in this org's API version
+        try {
+            const fallback = await globalConn.query("SELECT Id, Name, Format, LastRunDate FROM Report WHERE NamespacePrefix = NULL ORDER BY LastRunDate DESC LIMIT 20")
+            res.json({ success: true, reports: fallback.records })
+        } catch (e) {
+            res.status(500).json({ success: false, error: error.message })
+        }
+    }
+})
+
+// 2. Get List of Campaigns
+app.get('/api/campaigns', async (req, res) => {
+    if (!globalConn) return res.status(401).json({ success: false, error: 'Not authenticated' })
+    try {
+        const result = await globalConn.query("SELECT Id, Name, Status, Type, StartDate, EndDate FROM Campaign ORDER BY CreatedDate DESC LIMIT 50")
+        res.json({ success: true, campaigns: result.records })
     } catch (error) {
         res.status(500).json({ success: false, error: error.message })
     }
 })
 
-// 2. Create Collaboration Group
+// 3. Get List of Files (ContentDocuments)
+app.get('/api/files', async (req, res) => {
+    if (!globalConn) return res.status(401).json({ success: false, error: 'Not authenticated' })
+    try {
+        const result = await globalConn.query("SELECT Id, Title, FileExtension, ContentSize, LastModifiedDate FROM ContentDocument ORDER BY LastModifiedDate DESC LIMIT 50")
+        res.json({ success: true, files: result.records })
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message })
+    }
+})
+
+// 4. Create Collaboration Group
 app.post('/api/groups', async (req, res) => {
     if (!globalConn) return res.status(401).json({ success: false, error: 'Not authenticated' })
     try {
@@ -407,6 +530,175 @@ app.post('/api/files', async (req, res) => {
             console.log(`[OAuth API] 📄 Uploaded File: ${result.id}`)
             res.json({ success: true, id: result.id })
         } else throw new Error(result.errors.join(', '))
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message })
+    }
+})
+
+// == GENERIC CRUD ENDPOINTS ==
+
+// Generic Update
+app.put('/api/:object/:id', async (req, res) => {
+    if (!globalConn) return res.status(401).json({ success: false, error: 'Not authenticated' })
+    try {
+        let { object, id } = req.params
+        const mapping = {
+            'leads': 'Lead', 'lead': 'Lead',
+            'opportunities': 'Opportunity', 'opportunity': 'Opportunity',
+            'accounts': 'Account', 'account': 'Account',
+            'contacts': 'Contact', 'contact': 'Contact',
+            'tasks': 'Task', 'task': 'Task',
+            'events': 'Event', 'event': 'Event'
+        }
+        let properObject = mapping[object.toLowerCase()] || (object.charAt(0).toUpperCase() + object.slice(1))
+
+        const payload = { ...req.body, Id: id }
+        const result = await globalConn.sobject(properObject).update(payload)
+        if (result.success) {
+            console.log(`[OAuth API] 🔵 Updated ${properObject}: ${id}`)
+            res.json({ success: true })
+        } else throw new Error(result.errors.join(', '))
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message })
+    }
+})
+
+// Generic Delete
+// Bulk Delete
+app.post('/api/:object/bulk-delete', async (req, res) => {
+    if (!globalConn) return res.status(401).json({ success: false, error: 'Not authenticated' })
+    try {
+        let { object } = req.params
+        const mapping = {
+            'leads': 'Lead', 'lead': 'Lead',
+            'opportunities': 'Opportunity', 'opportunity': 'Opportunity',
+            'accounts': 'Account', 'account': 'Account',
+            'contacts': 'Contact', 'contact': 'Contact',
+            'reports': 'Report', 'report': 'Report',
+            'tasks': 'Task', 'task': 'Task',
+            'events': 'Event', 'event': 'Event',
+            'campaigns': 'Campaign', 'campaign': 'Campaign',
+            'groups': 'CollaborationGroup', 'group': 'CollaborationGroup',
+            'files': 'ContentDocument', 'file': 'ContentDocument'
+        }
+        const properObject = mapping[object.toLowerCase()] || (object.charAt(0).toUpperCase() + object.slice(1))
+
+        console.log(`[OAuth API] 🧨 Initiating Bulk Delete for: ${properObject}`)
+        
+        // Fetch existing records first to ensure we have something to delete and for better logging
+        const records = await globalConn.sobject(properObject).find({}, 'Id').execute();
+        console.log(`[OAuth API] 🔍 Found ${records.length} records to delete in ${properObject}.`)
+
+        if (records.length === 0) {
+            return res.json({ success: true, count: 0, message: 'No records found to delete.' });
+        }
+
+        // Use smartDestroy to handle dependencies (like cases on accounts)
+        const ids = records.map(r => r.Id);
+        const result = await smartDestroy(globalConn, properObject, ids);
+        
+        // Handle results which might be an array or a single object
+        const resultsArray = Array.isArray(result) ? result : [result];
+        const successCount = resultsArray.filter(r => r.success).length;
+        const errorCount = resultsArray.length - successCount;
+
+        console.log(`[OAuth API] 💥 Bulk Delete Complete for ${properObject}. Success: ${successCount}, Errors: ${errorCount}`)
+        
+        if (errorCount > 0) {
+            const failedRecord = resultsArray.find(r => !r.success);
+            const errorDetail = failedRecord?.errors ? JSON.stringify(failedRecord.errors) : 'Unknown error';
+            console.error(`[OAuth API] ❌ Deletion partial failure for ${properObject}. Sample Error: ${errorDetail}`);
+            
+            // SPECIAL CASE: If all failures are due to read-only/system records, don't crash the UI with a scary error
+            const isAllReadOnly = resultsArray.every(r => r.success || (r.errors && JSON.stringify(r.errors).includes('INSUFFICIENT_ACCESS_OR_READONLY')));
+            
+            if (isAllReadOnly) {
+                return res.json({ 
+                    success: true, 
+                    count: successCount, 
+                    totalAttempted: ids.length,
+                    note: 'Some system-protected records were skipped.' 
+                });
+            }
+
+            if (successCount === 0 && ids.length > 0) {
+                return res.status(400).json({ 
+                    success: false, 
+                    error: `Failed to delete any ${properObject} records. Salesforce Error: ${errorDetail}`,
+                    count: 0,
+                    totalAttempted: ids.length
+                });
+            }
+        }
+
+        res.json({ success: true, count: successCount, totalAttempted: resultsArray.length })
+    } catch (error) {
+        console.error(`[OAuth API] ❌ Bulk Delete CRASH for ${req.params.object}:`, error)
+        res.status(500).json({ success: false, error: error.message })
+    }
+})
+
+app.post('/api/nuke-all', async (req, res) => {
+    if (!globalConn) return res.status(401).json({ success: false, error: 'Not authenticated' })
+    try {
+        const objectsToWipe = ['Lead', 'Opportunity', 'Account', 'Contact', 'Task', 'Event', 'Campaign', 'CollaborationGroup', 'ContentDocument']
+        const results = {}
+
+        console.log(`[OAuth API] ☢️ GLOBAL NUKE INITIATED ☢️`)
+
+        for (const obj of objectsToWipe) {
+            try {
+                const records = await globalConn.sobject(obj).find({}, 'Id').execute()
+                if (records.length > 0) {
+                    const ids = records.map(r => r.Id)
+                    console.log(`[SmartNuke] 🧨 Wiping ${ids.length} records for ${obj}`);
+                    
+                    // Split into chunks for REST API safety, but use smartDestroy for each chunk
+                    for (let i = 0; i < ids.length; i += 200) {
+                        const chunk = ids.slice(i, i + 200)
+                        await smartDestroy(globalConn, obj, chunk)
+                    }
+                    results[obj] = records.length
+                } else {
+                    results[obj] = 0
+                }
+            } catch (err) {
+                console.error(`Error wiping ${obj}:`, err.message)
+                results[obj] = `Error: ${err.message}`
+            }
+        }
+
+        console.log(`[OAuth API] ✅ Global Nuke Complete. Records cleared:`, results)
+        res.json({ success: true, results })
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message })
+    }
+})
+
+app.delete('/api/:object/:id', async (req, res) => {
+    if (!globalConn) return res.status(401).json({ success: false, error: 'Not authenticated' })
+    try {
+        let { object, id } = req.params
+        const mapping = {
+            'leads': 'Lead', 'lead': 'Lead',
+            'opportunities': 'Opportunity', 'opportunity': 'Opportunity',
+            'accounts': 'Account', 'account': 'Account',
+            'contacts': 'Contact', 'contact': 'Contact',
+            'tasks': 'Task', 'task': 'Task',
+            'events': 'Event', 'event': 'Event'
+        }
+        const properObject = mapping[object.toLowerCase()] || (object.charAt(0).toUpperCase() + object.slice(1))
+
+        const result = await smartDestroy(globalConn, properObject, id)
+        const resObj = Array.isArray(result) ? result[0] : result
+        
+        if (resObj.success) {
+            console.log(`[OAuth API] 🔴 Deleted ${properObject}: ${id}`)
+            res.json({ success: true })
+        } else {
+            const errMsg = resObj.errors?.join(', ') || 'Unknown Salesforce deletion error'
+            throw new Error(errMsg)
+        }
     } catch (error) {
         res.status(500).json({ success: false, error: error.message })
     }
